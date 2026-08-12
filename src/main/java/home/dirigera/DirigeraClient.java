@@ -141,7 +141,9 @@ public class DirigeraClient {
 
 			return HttpClient.newBuilder()
 					.sslContext( sslContext )
-					.connectTimeout( Duration.ofSeconds( 5 ) )
+					// LAN-appropriate: a healthy hub connects in milliseconds, and an
+					// absent one shouldn't hold anybody up longer than this
+					.connectTimeout( Duration.ofSeconds( 2 ) )
 					.build();
 		}
 		catch( final GeneralSecurityException e ) {

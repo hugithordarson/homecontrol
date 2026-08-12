@@ -38,7 +38,12 @@ than one.
   Everything else in the fleet strobes crisply per-bulb testing: WS bulbs on
   2.3.x/3.0.x, the 2017-gen CWS opal 600lm on 2.3.x, and notably the successor
   color bulb "E27 CWS globe 806lm" (fw 1.0.38) — so its firmware line number
-  means nothing; test the model, not the version.
+  means nothing; test the model, not the version. Cross-site verdicts (2026-08):
+  TRADFRI CWS globe 806lm strobes in both E27 (home ×2) and E14 (office ×6)
+  variants, CWS opal 600lm fw 2.3.x strobes at both sites — but the Matter-era
+  KAJPLATS E14 CWS globe (fw 1.2.0, no update available) FADES, just faster than
+  the LED1924G9. So the TRADFRI CWS globe is the only color bulb verified to
+  snap, and it's the outgoing line — stock up before KAJPLATS fully replaces it.
 - Rooms are renamed with PUT `/v1/rooms/{id}` (PATCH 404s).
 - `lightLevel` patches on a turned-off bulb are silently ignored, and a patch
   combining `isOn` with `lightLevel` applies only the `isOn` — always send them

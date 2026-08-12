@@ -39,6 +39,16 @@ public class Hub {
 	/** Human-readable failures from the last lights() fetch — an unreachable hub is a warning, not a dead dashboard */
 	private static final List<String> _fetchErrors = new CopyOnWriteArrayList<>();
 
+	/**
+	 * Circuit breaker: hubs that failed a fetch land here (address → earliest re-probe
+	 * time) and are skipped during renders, so an absent hub (e.g. the home hub, seen
+	 * from the office) costs its connect-timeout once — not on every request. A
+	 * background probe readmits the hub when it answers again.
+	 */
+	private static final Map<String, Long> _downHubs = new ConcurrentHashMap<>();
+	private static final java.util.Set<String> _probing = ConcurrentHashMap.newKeySet();
+	private static final long HUB_RETRY_MS = 30_000;
+
 	public record HubConfig( String name, String address, String token ) {}
 
 	/** The on-disk shape. Old single-hub config files ({hubAddress, token}) migrate on read. */
@@ -87,32 +97,69 @@ public class Hub {
 	 * contributes a fetchErrors() entry instead of an exception.
 	 */
 	public static List<Device> lights() {
-		final List<Device> all = new ArrayList<>();
+		final java.util.Queue<Device> collected = new java.util.concurrent.ConcurrentLinkedQueue<>();
 		_fetchErrors.clear();
 
-		for( final HubConfig hub : hubs() ) {
-			try {
-				for( final Device device : client( hub ).devices() ) {
-					_deviceHub.put( device.id(), hub.address() );
-
-					if( device.room() != null ) {
-						_roomHub.put( device.room().id(), hub.address() );
-					}
-
-					if( device.isLight() && !device.hidden() ) {
-						all.add( device );
-					}
+		try( final var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor() ) {
+			for( final HubConfig hub : hubs() ) {
+				if( _downHubs.containsKey( hub.address() ) ) {
+					_fetchErrors.add( "%s: unreachable, retrying in the background".formatted( hub.name() ) );
+					probeDownHub( hub );
+					continue;
 				}
-			}
-			catch( final Exception e ) {
-				_fetchErrors.add( "%s: %s".formatted( hub.name(), e.getMessage() ) );
+
+				executor.submit( () -> {
+					try {
+						for( final Device device : client( hub ).devices() ) {
+							_deviceHub.put( device.id(), hub.address() );
+
+							if( device.room() != null ) {
+								_roomHub.put( device.room().id(), hub.address() );
+							}
+
+							if( device.isLight() && !device.hidden() ) {
+								collected.add( device );
+							}
+						}
+					}
+					catch( final Exception e ) {
+						_downHubs.put( hub.address(), System.currentTimeMillis() + HUB_RETRY_MS );
+						_fetchErrors.add( "%s: %s".formatted( hub.name(), e.getMessage() ) );
+					}
+				} );
 			}
 		}
 
+		final List<Device> all = new ArrayList<>( collected );
 		all.sort( Comparator.comparing( Device::roomName ).thenComparing( Device::name ) );
 		_lightsSnapshot = all;
 		_lightsSnapshotTime = System.currentTimeMillis();
 		return all;
+	}
+
+	/**
+	 * Kicks off a background reachability check for a down hub, at most once per
+	 * cooldown period — renders never block on it
+	 */
+	private static void probeDownHub( final HubConfig hub ) {
+		final Long retryAt = _downHubs.get( hub.address() );
+
+		if( retryAt == null || System.currentTimeMillis() < retryAt || !_probing.add( hub.address() ) ) {
+			return;
+		}
+
+		Thread.ofVirtual().name( "hub-probe" ).start( () -> {
+			try {
+				client( hub ).devices();
+				_downHubs.remove( hub.address() );
+			}
+			catch( final Exception e ) {
+				_downHubs.put( hub.address(), System.currentTimeMillis() + HUB_RETRY_MS );
+			}
+			finally {
+				_probing.remove( hub.address() );
+			}
+		} );
 	}
 
 	public static List<String> fetchErrors() {
@@ -323,6 +370,7 @@ public class Hub {
 
 		_hubs = null;
 		_clients.clear();
+		_downHubs.clear();
 	}
 
 	static Path configDirectory() {
