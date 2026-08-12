@@ -1,0 +1,31 @@
+<wo:PageWrapper title="Scenes" width="600px">
+	<h1>Scenes</h1>
+
+	<wo:if condition="$hasError">
+		<p class="error"><wo:str value="$error" /></p>
+	</wo:if>
+
+	<wo:if condition="$hasScenes">
+		<table class="scenetable">
+			<wo:repetition list="$scenes" item="$currentScene">
+				<tr>
+					<td><strong><wo:str value="$currentScene.name" /></strong></td>
+					<td class="dim"><wo:str value="$currentScene.lightCount" /> lights</td>
+					<td><wo:link action="$applyCurrentScene">Apply</wo:link></td>
+					<td><wo:link action="$deleteCurrentScene" class="danger">Delete</wo:link></td>
+				</tr>
+			</wo:repetition>
+		</table>
+	</wo:if>
+
+	<wo:if condition="$hasNoScenes">
+		<p>No scenes yet.</p>
+	</wo:if>
+
+	<h2>New scene</h2>
+	<p class="hint">Put the lights exactly how you want them on the <a href="/">Lights</a> page, then save the arrangement here:</p>
+	<wo:WOForm>
+		<wo:WOTextField value="$newSceneName" placeholder="Scene name, e.g. Movie night" />
+		<wo:WOSubmitButton action="$captureScene" value="Save current state as scene" />
+	</wo:WOForm>
+</wo:PageWrapper>

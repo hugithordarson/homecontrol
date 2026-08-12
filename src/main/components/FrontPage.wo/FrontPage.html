@@ -1,0 +1,63 @@
+<wo:PageWrapper title="HomeControl">
+	<wo:if condition="$notConfigured">
+		<h1>Welcome</h1>
+		<p>This app isn't paired with a DIRIGERA hub yet.</p>
+		<p><a href="/setup">Set up the hub connection &rarr;</a></p>
+	</wo:if>
+
+	<wo:if condition="$hasHubError">
+		<p class="error">Could not talk to the hub: <wo:str value="$hubError" /></p>
+	</wo:if>
+
+	<wo:if condition="$hasFetchWarnings">
+		<wo:repetition list="$fetchWarnings" item="$currentWarning">
+			<p class="error">Hub unreachable — <wo:str value="$currentWarning" /></p>
+		</wo:repetition>
+	</wo:if>
+
+	<wo:if condition="$configured">
+		<div class="toolbar">
+			<button class="big" onclick="hc.all('on')">All on</button>
+			<button class="big off" onclick="hc.all('off')">All off</button>
+			<button class="bolt" title="Lightning strike" onclick="hc.strike('/api/effect/lightning')">&#9889;</button>
+			<button id="thunderToggle" onclick="hc.toggleThunder()">&#128263; Thunder off</button>
+			<wo:if condition="$hasScenes">
+				<span class="scenes">
+					<wo:repetition list="$scenes" item="$currentScene">
+						<wo:container elementName="button" class="scene" onclick="$currentSceneApplyJS"><wo:str value="$currentScene.name" /></wo:container>
+					</wo:repetition>
+				</span>
+			</wo:if>
+		</div>
+
+		<div class="rooms">
+			<wo:repetition list="$rooms" item="$currentRoom">
+				<section class="room">
+					<header>
+						<h2><wo:str value="$currentRoom.name" /><wo:if condition="$multipleHubs"><span class="hubtag"><wo:str value="$currentRoom.hubName" /></span></wo:if><wo:if condition="$currentRoomRenamable"><wo:container elementName="button" class="rename" title="Rename room" onclick="$currentRoomRenameJS">&#9998;</wo:container></wo:if></h2>
+						<span class="roombuttons">
+							<wo:container elementName="button" onclick="$currentRoomOnJS">On</wo:container>
+							<wo:container elementName="button" onclick="$currentRoomOffJS">Off</wo:container>
+							<wo:container elementName="button" class="roombolt" title="Lightning in this room only" onclick="$currentRoomBoltJS">&#9889;</wo:container>
+						</span>
+					</header>
+					<wo:repetition list="$currentRoom.lights" item="$currentLight">
+						<wo:container elementName="div" class="$currentLightClass">
+							<wo:container elementName="button" class="bulb" onclick="$currentLightToggleJS">&#9679;</wo:container>
+							<span class="lightname"><wo:str value="$currentLight.name" /></span>
+							<wo:if condition="$currentLight.dimmable">
+								<wo:container elementName="input" type="range" min="1" max="100" value="$currentLightLevel" oninput="$currentLightLevelJS" />
+							</wo:if>
+							<wo:if condition="$currentLight.supportsColor">
+								<wo:container elementName="input" type="color" class="swatch" value="$currentLightColorHex" oninput="$currentLightColorJS" />
+							</wo:if>
+							<wo:if condition="$currentLight.dimmable">
+								<wo:container elementName="button" class="lightbolt" title="Strobe this bulb" onclick="$currentLightBoltJS">&#9889;</wo:container>
+							</wo:if>
+						</wo:container>
+					</wo:repetition>
+				</section>
+			</wo:repetition>
+		</div>
+	</wo:if>
+</wo:PageWrapper>
