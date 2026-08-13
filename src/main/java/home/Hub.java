@@ -285,6 +285,17 @@ public class Hub {
 		clientByAddress( address ).renameRoom( roomId, name );
 	}
 
+	/**
+	 * @return The address of the hub this device belongs to, if we've seen it in a fetch
+	 */
+	public static String hubAddressForDevice( final String deviceId ) {
+		return _deviceHub.get( deviceId );
+	}
+
+	public static boolean hubDown( final String address ) {
+		return _downHubs.containsKey( address );
+	}
+
 	private static DirigeraClient clientForDevice( final String deviceId ) {
 		String address = _deviceHub.get( deviceId );
 

@@ -54,7 +54,11 @@ public class ScenesPage extends HomeComponent {
 
 	public WOActionResults applyCurrentScene() {
 		try {
-			Scenes.apply( currentScene.slug() );
+			final String note = Scenes.apply( currentScene.slug() );
+
+			if( note != null ) {
+				flashError( note );
+			}
 		}
 		catch( final Exception e ) {
 			flashError( e.getMessage() );

@@ -58,8 +58,14 @@ public class Scenes {
 	 */
 	public static Scene captureCurrent( final String name ) {
 		final Map<String, Scene.LightState> states = new LinkedHashMap<>();
+		final List<String> hubs = new ArrayList<>();
 
 		for( final Device light : Hub.lights() ) {
+			final String hubAddress = Hub.hubAddressForDevice( light.id() );
+
+			if( hubAddress != null && !hubs.contains( hubAddress ) ) {
+				hubs.add( hubAddress );
+			}
 			// A color bulb showing a color gets its hue/saturation captured; a bulb in
 			// white mode (or without color support) gets its color temperature instead
 			final boolean inColorMode = light.inColorMode();
@@ -72,7 +78,7 @@ public class Scenes {
 					inColorMode ? light.attributes().colorSaturation() : null ) );
 		}
 
-		final Scene scene = new Scene( name, slugify( name ), states );
+		final Scene scene = new Scene( name, slugify( name ), hubs, states );
 
 		final List<Scene> scenes = all();
 		scenes.removeIf( existing -> existing.slug().equals( scene.slug() ) );
@@ -90,37 +96,54 @@ public class Scenes {
 	/**
 	 * Applies a scene: each light is sent its stored state. isOn and lightLevel are
 	 * sent as separate patches — the hub is picky about combined attribute updates.
+	 * Lights whose hub is unreachable (e.g. the scene is for the other location) are
+	 * skipped rather than aborting the rest of the scene.
+	 *
+	 * @return null when everything applied, otherwise a human-readable note about the skipped lights
 	 */
-	public static void apply( final String slug ) {
+	public static String apply( final String slug ) {
 		final Scene scene = bySlug( slug );
 
 		if( scene == null ) {
 			throw new IllegalArgumentException( "No scene with slug " + slug );
 		}
 
+		int skipped = 0;
+
 		for( final Map.Entry<String, Scene.LightState> entry : scene.states().entrySet() ) {
 			final String deviceId = entry.getKey();
 			final Scene.LightState state = entry.getValue();
 
-			if( Boolean.FALSE.equals( state.isOn() ) ) {
-				Hub.setAttributes( deviceId, Map.of( "isOn", false ) );
-				continue;
+			try {
+				if( Boolean.FALSE.equals( state.isOn() ) ) {
+					Hub.setAttributes( deviceId, Map.of( "isOn", false ) );
+					continue;
+				}
+
+				Hub.setAttributes( deviceId, Map.of( "isOn", true ) );
+
+				if( state.lightLevel() != null ) {
+					Hub.setAttributes( deviceId, Map.of( "lightLevel", state.lightLevel() ) );
+				}
+
+				if( state.colorTemperature() != null ) {
+					Hub.setAttributes( deviceId, Map.of( "colorTemperature", state.colorTemperature() ) );
+				}
+
+				if( state.colorHue() != null && state.colorSaturation() != null ) {
+					Hub.setAttributes( deviceId, Map.of( "colorHue", state.colorHue(), "colorSaturation", state.colorSaturation() ) );
+				}
 			}
-
-			Hub.setAttributes( deviceId, Map.of( "isOn", true ) );
-
-			if( state.lightLevel() != null ) {
-				Hub.setAttributes( deviceId, Map.of( "lightLevel", state.lightLevel() ) );
-			}
-
-			if( state.colorTemperature() != null ) {
-				Hub.setAttributes( deviceId, Map.of( "colorTemperature", state.colorTemperature() ) );
-			}
-
-			if( state.colorHue() != null && state.colorSaturation() != null ) {
-				Hub.setAttributes( deviceId, Map.of( "colorHue", state.colorHue(), "colorSaturation", state.colorSaturation() ) );
+			catch( final Exception e ) {
+				skipped++;
 			}
 		}
+
+		if( skipped == 0 ) {
+			return null;
+		}
+
+		return "%s of %s lights are out of reach right now (probably at the other location)".formatted( skipped, scene.states().size() );
 	}
 
 	private static void save() {

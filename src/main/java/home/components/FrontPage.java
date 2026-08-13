@@ -163,4 +163,27 @@ public class FrontPage extends HomeComponent {
 	public String currentSceneApplyJS() {
 		return "hc.scene('%s')".formatted( currentScene.slug() );
 	}
+
+	/**
+	 * @return true when every hub this scene's lights live on is currently unreachable —
+	 * i.e. the scene belongs to the other location. Scenes from before hub-stamping
+	 * (hubs == null) are never marked away.
+	 */
+	public boolean currentSceneAway() {
+		final List<String> hubs = currentScene.hubs();
+
+		if( hubs == null || hubs.isEmpty() ) {
+			return false;
+		}
+
+		return hubs.stream().allMatch( Hub::hubDown );
+	}
+
+	public String currentSceneClass() {
+		return currentSceneAway() ? "scene away" : "scene";
+	}
+
+	public String currentSceneTitle() {
+		return currentSceneAway() ? "This scene's lights are at the other location" : "";
+	}
 }

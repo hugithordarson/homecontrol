@@ -11,7 +11,7 @@
 
 	<wo:if condition="$hasFetchWarnings">
 		<wo:repetition list="$fetchWarnings" item="$currentWarning">
-			<p class="error">Hub unreachable — <wo:str value="$currentWarning" /></p>
+			<p class="hubnote">&#128268; <wo:str value="$currentWarning" /></p>
 		</wo:repetition>
 	</wo:if>
 
@@ -24,7 +24,7 @@
 			<wo:if condition="$hasScenes">
 				<span class="scenes">
 					<wo:repetition list="$scenes" item="$currentScene">
-						<wo:container elementName="button" class="scene" onclick="$currentSceneApplyJS"><wo:str value="$currentScene.name" /></wo:container>
+						<wo:container elementName="button" class="$currentSceneClass" title="$currentSceneTitle" onclick="$currentSceneApplyJS"><wo:str value="$currentScene.name" /></wo:container>
 					</wo:repetition>
 				</span>
 			</wo:if>
