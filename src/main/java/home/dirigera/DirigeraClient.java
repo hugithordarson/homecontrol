@@ -77,6 +77,15 @@ public class DirigeraClient {
 	}
 
 	/**
+	 * A cheap authenticated request — used to warm up TLS connections before an
+	 * effect, so its first commands don't pay the hub's slow handshake mid-rhythm
+	 */
+	public void ping() {
+		final HttpRequest request = requestBuilder( "/hub/status" ).GET().build();
+		send( request, 200 );
+	}
+
+	/**
 	 * Renames a room. The hub answers 202 — the rooms endpoint takes PUT (PATCH 404s).
 	 */
 	public void renameRoom( final String roomId, final String name ) {

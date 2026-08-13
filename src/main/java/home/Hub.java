@@ -292,6 +292,30 @@ public class Hub {
 		return _deviceHub.get( deviceId );
 	}
 
+	/**
+	 * Opens a few connections to each hub the given lights live on, fire-and-forget.
+	 * An effect calls this just before its schedule starts so the flash commands find
+	 * warm TLS connections instead of paying the hub's slow handshake mid-storm.
+	 */
+	public static void warmHubsFor( final List<Device> lights ) {
+		lights.stream()
+				.map( light -> _deviceHub.get( light.id() ) )
+				.filter( address -> address != null )
+				.distinct()
+				.forEach( address -> {
+					for( int i = 0; i < 3; i++ ) {
+						Thread.ofVirtual().name( "hub-warmup" ).start( () -> {
+							try {
+								clientByAddress( address ).ping();
+							}
+							catch( final Exception e ) {
+								// Warming is best-effort
+							}
+						} );
+					}
+				} );
+	}
+
 	public static boolean hubDown( final String address ) {
 		return _downHubs.containsKey( address );
 	}

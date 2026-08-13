@@ -112,6 +112,10 @@ public class Effects {
 
 		final boolean anyOn = lights.stream().anyMatch( Device::on );
 
+		// Open connections now so the first flashes don't pay TLS handshakes;
+		// the schedule's head start below gives the warmup time to win the race
+		Hub.warmHubsFor( lights );
+
 		try {
 			try( final var executor = Executors.newVirtualThreadPerTaskExecutor() ) {
 				final long start = System.currentTimeMillis();
@@ -139,7 +143,7 @@ public class Effects {
 				}
 
 				// If everything was off, the whole storm just starts at the join point
-				long at = anyOn ? 0 : OFF_BULB_JOIN_MS;
+				long at = anyOn ? WARMUP_LEAD_MS : OFF_BULB_JOIN_MS;
 
 				for( int i = 0; i < flashes; i++ ) {
 					final int intensity = 40 + random.nextInt( 61 );
@@ -215,6 +219,9 @@ public class Effects {
 
 	/** How long a woken bulb's on + snap-to-minimum needs before it can safely join the waves */
 	private static final long OFF_BULB_JOIN_MS = 600;
+
+	/** Head start for the connection warmup before the first flash */
+	private static final long WARMUP_LEAD_MS = 300;
 
 	/**
 	 * One flash wave across the group. Bulbs that were off skip wave events during
