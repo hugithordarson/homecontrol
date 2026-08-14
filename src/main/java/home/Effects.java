@@ -326,8 +326,12 @@ public class Effects {
 		/** A step every this many ms... */
 		private static final long INTERVAL_MS = 4000;
 
-		/** ...with the color gliding for this much of it */
-		private static final int TRANSITION_MS = 3200;
+		/**
+		 * ...with the color gliding for this much of it. The generous margin matters:
+		 * a glide command arriving while the previous glide is still finishing makes
+		 * the bulb snap-complete it — a visible blink at every hand-off.
+		 */
+		private static final int TRANSITION_MS = 2400;
 
 		record BulbColor( String deviceId, double hue, double saturation ) {}
 
@@ -360,19 +364,13 @@ public class Effects {
 				step++;
 
 				for( int i = 0; i < _colors.size(); i++ ) {
-					final BulbColor current = _colors.get( ( i + step - 1 ) % _colors.size() );
 					final BulbColor target = _colors.get( ( i + step ) % _colors.size() );
 
 					try {
-						// Hue glides alone: a combined hue+sat move can cut through the
-						// middle of the color space (a brief desaturated brightness spike),
-						// while a pure hue move sweeps the saturated rim. Saturation only
-						// gets its own patch when the palette actually varies in it.
-						Hub.setAttributes( _colors.get( i ).deviceId(), Map.of( "colorHue", target.hue() ), TRANSITION_MS );
-
-						if( Math.abs( target.saturation() - current.saturation() ) >= 0.05 ) {
-							Hub.setAttributes( _colors.get( i ).deviceId(), Map.of( "colorSaturation", target.saturation() ), TRANSITION_MS );
-						}
+						// Hue and saturation must travel together — the hub rejects a
+						// patch containing only one of them (400, "allowed types")
+						Hub.setAttributes( _colors.get( i ).deviceId(),
+								Map.of( "colorHue", target.hue(), "colorSaturation", target.saturation() ), TRANSITION_MS );
 					}
 					catch( final Exception e ) {
 						// A missed glide is no tragedy — the next step catches up
