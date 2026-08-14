@@ -273,4 +273,117 @@ public class Effects {
 			Thread.sleep( delay );
 		}
 	}
+
+	/** The color carousels currently running, by roomId */
+	private static final Map<String, ColorCycler> _cyclers = new java.util.concurrent.ConcurrentHashMap<>();
+
+	/**
+	 * Starts or stops the color carousel for a room: each color-capable bulb's current
+	 * color glides to the next bulb every few seconds, round and round. Intended for
+	 * multi-bulb fixtures set up as rooms — the colors travel through the fixture.
+	 *
+	 * @return true if the carousel is now running, false if it was stopped (or the room lacks two lit color bulbs)
+	 */
+	public static boolean toggleCycle( final String roomId ) {
+		final ColorCycler existing = _cyclers.remove( roomId );
+
+		if( existing != null ) {
+			existing.stop();
+			return false;
+		}
+
+		final List<ColorCycler.BulbColor> colors = Hub.lightsSnapshot( 3000 )
+				.stream()
+				.filter( light -> roomId.equals( light.roomId() ) )
+				.filter( Device::supportsColor )
+				.filter( Device::reachable )
+				.filter( Device::on )
+				.filter( light -> light.attributes() != null && light.attributes().colorHue() != null && light.attributes().colorSaturation() != null )
+				.map( light -> new ColorCycler.BulbColor( light.id(), light.attributes().colorHue(), light.attributes().colorSaturation() ) )
+				.toList();
+
+		if( colors.size() < 2 ) {
+			return false;
+		}
+
+		final ColorCycler cycler = new ColorCycler( roomId, colors );
+		_cyclers.put( roomId, cycler );
+		cycler.start();
+		return true;
+	}
+
+	public static boolean cycling( final String roomId ) {
+		return _cyclers.containsKey( roomId );
+	}
+
+	static class ColorCycler {
+
+		/** A step every this many ms... */
+		private static final long INTERVAL_MS = 4000;
+
+		/** ...with the color gliding for this much of it */
+		private static final int TRANSITION_MS = 3200;
+
+		record BulbColor( String deviceId, double hue, double saturation ) {}
+
+		private final String _roomId;
+		private final List<BulbColor> _colors;
+		private volatile boolean _stopped;
+		private Thread _thread;
+
+		ColorCycler( final String roomId, final List<BulbColor> colors ) {
+			_roomId = roomId;
+			_colors = colors;
+		}
+
+		void start() {
+			_thread = Thread.ofVirtual().name( "color-cycle-" + _roomId ).start( this::run );
+		}
+
+		void stop() {
+			_stopped = true;
+
+			if( _thread != null ) {
+				_thread.interrupt();
+			}
+		}
+
+		private void run() {
+			int step = 0;
+
+			while( !_stopped ) {
+				step++;
+
+				for( int i = 0; i < _colors.size(); i++ ) {
+					final BulbColor target = _colors.get( ( i + step ) % _colors.size() );
+
+					try {
+						Hub.setAttributes( _colors.get( i ).deviceId(),
+								Map.of( "colorHue", target.hue(), "colorSaturation", target.saturation() ), TRANSITION_MS );
+					}
+					catch( final Exception e ) {
+						// A missed glide is no tragedy — the next step catches up
+					}
+				}
+
+				try {
+					Thread.sleep( INTERVAL_MS );
+				}
+				catch( final InterruptedException e ) {
+					Thread.currentThread().interrupt();
+					break;
+				}
+			}
+
+			// Settle each bulb back on its own original color
+			for( final BulbColor color : _colors ) {
+				try {
+					Hub.setAttributes( color.deviceId(), Map.of( "colorHue", color.hue(), "colorSaturation", color.saturation() ), 1000 );
+				}
+				catch( final Exception e ) {
+					// Best effort
+				}
+			}
+		}
+	}
 }

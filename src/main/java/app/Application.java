@@ -32,6 +32,7 @@ public class Application extends ERXApplication {
 		RouteTable.defaultRouteTable().map( "/api/scene/*", this::applyScene );
 		RouteTable.defaultRouteTable().map( "/api/rename-room/*", this::renameRoom );
 		RouteTable.defaultRouteTable().map( "/api/effect/*", this::effect );
+		RouteTable.defaultRouteTable().map( "/api/cycle/*", this::toggleCycle );
 	}
 
 	/**
@@ -147,6 +148,18 @@ public class Application extends ERXApplication {
 		}
 
 		return ok();
+	}
+
+	/**
+	 * /api/cycle/[roomId] — starts or stops the room's color carousel
+	 */
+	private WOActionResults toggleCycle( RouteInvocation invocation ) {
+		final boolean cycling = home.Effects.toggleCycle( lastPathComponent( invocation ) );
+
+		final WOResponse response = new WOResponse();
+		response.setHeader( "application/json", "content-type" );
+		response.setContent( "{\"ok\":true,\"cycling\":%s}".formatted( cycling ) );
+		return response;
 	}
 
 	private static String[] pathComponents( final RouteInvocation invocation, final String prefix ) {

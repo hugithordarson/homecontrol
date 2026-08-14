@@ -39,6 +39,9 @@
 							<wo:container elementName="button" onclick="$currentRoomOnJS">On</wo:container>
 							<wo:container elementName="button" onclick="$currentRoomOffJS">Off</wo:container>
 							<wo:container elementName="button" class="roombolt" title="Lightning in this room only" onclick="$currentRoomBoltJS">&#9889;</wo:container>
+							<wo:if condition="$currentRoomCyclable">
+								<wo:container elementName="button" class="$currentRoomCycleClass" title="Cycle colors between the bulbs" onclick="$currentRoomCycleJS">&#8635;</wo:container>
+							</wo:if>
 						</span>
 					</header>
 					<wo:repetition list="$currentRoom.lights" item="$currentLight">

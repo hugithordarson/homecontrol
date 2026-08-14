@@ -40,6 +40,8 @@
 			.room .roombuttons button { padding: 4px 10px; font-size: 0.85em; }
 			.room .roombolt { background: #3a3254; }
 			.room .roombolt:hover { background: #4c4270; }
+			.room .roomcycle { background: #2b313b; }
+			.room .roomcycle.active { background: #245c38; color: #a5edc3; }
 
 			.light { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
 			.light .bulb { background: none; font-size: 1.2em; color: #4a5260; padding: 2px 6px; }
@@ -122,6 +124,9 @@
 						src.start( start );
 						src.stop( start + dur );
 					}
+				},
+				cycle: function( id ) {
+					hc.post( '/api/cycle/' + id ).then( hc.reloadSoon );
 				},
 				renameRoom: function( id, currentName ) {
 					var name = prompt( 'New room name:', currentName );

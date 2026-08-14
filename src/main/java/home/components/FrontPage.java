@@ -148,6 +148,21 @@ public class FrontPage extends HomeComponent {
 		return "hc.renameRoom('%s', '%s')".formatted( currentRoom.id(), escapedName );
 	}
 
+	/**
+	 * @return true when the room can host the color carousel — two or more color bulbs
+	 */
+	public boolean currentRoomCyclable() {
+		return currentRoom.lights().stream().filter( Device::supportsColor ).count() >= 2;
+	}
+
+	public String currentRoomCycleJS() {
+		return "hc.cycle('%s')".formatted( currentRoom.id() );
+	}
+
+	public String currentRoomCycleClass() {
+		return home.Effects.cycling( currentRoom.id() ) ? "roomcycle active" : "roomcycle";
+	}
+
 	public String currentRoomBoltJS() {
 		return "hc.strike('/api/effect/lightning?room=%s')".formatted( currentRoom.id() );
 	}
