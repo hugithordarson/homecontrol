@@ -292,7 +292,10 @@ public class Effects {
 			return false;
 		}
 
-		final List<ColorCycler.BulbColor> colors = Hub.lightsSnapshot( 3000 )
+		// A fresh fetch, not the snapshot: the palette is whatever the bulbs wear right
+		// now, and a stale snapshot (or one taken mid-glide on a quick restart) would
+		// capture smeared in-between colors and rotate nonsense forever
+		final List<ColorCycler.BulbColor> colors = Hub.lights()
 				.stream()
 				.filter( light -> roomId.equals( light.roomId() ) )
 				.filter( Device::supportsColor )
