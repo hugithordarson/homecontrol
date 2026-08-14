@@ -48,6 +48,12 @@ than one.
 - The hub reports attribute values it refuses to accept back: bulbs report
   colorSaturation slightly above 1.0 (e.g. 1.0022), but writing anything above
   1.0 fails. Clamp before echoing any read value into a patch.
+- colorHue and colorSaturation must be patched TOGETHER — either alone gets 400
+  ("attributes does not match any of the allowed types"). Opposite rule from
+  isOn/lightLevel, which must be separate. There is no consistency; test.
+- Leave generous margin between a transition's duration and the next command to
+  the same bulb — a command landing mid-transition makes the bulb snap-complete
+  the ongoing one (a visible blink).
 - `lightLevel` patches on a turned-off bulb are silently ignored, and a patch
   combining `isOn` with `lightLevel` applies only the `isOn` — always send them
   as separate patches, on first. A bulb switched off remembers its level at that
