@@ -299,7 +299,12 @@ public class Effects {
 				.filter( Device::reachable )
 				.filter( Device::on )
 				.filter( light -> light.attributes() != null && light.attributes().colorHue() != null && light.attributes().colorSaturation() != null )
-				.map( light -> new ColorCycler.BulbColor( light.id(), light.attributes().colorHue(), light.attributes().colorSaturation() ) )
+				// Clamped at capture: the hub REPORTS saturations slightly above 1.0 but
+				// rejects them on write — echoing raw values back kills the patch
+				.map( light -> new ColorCycler.BulbColor(
+						light.id(),
+						Math.clamp( light.attributes().colorHue(), 0d, 360d ),
+						Math.clamp( light.attributes().colorSaturation(), 0d, 1d ) ) )
 				.toList();
 
 		if( colors.size() < 2 ) {

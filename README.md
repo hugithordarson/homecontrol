@@ -45,6 +45,9 @@ than one.
   the LED1924G9. So the TRADFRI CWS globe is the only color bulb verified to
   snap, and it's the outgoing line — stock up before KAJPLATS fully replaces it.
 - Rooms are renamed with PUT `/v1/rooms/{id}` (PATCH 404s).
+- The hub reports attribute values it refuses to accept back: bulbs report
+  colorSaturation slightly above 1.0 (e.g. 1.0022), but writing anything above
+  1.0 fails. Clamp before echoing any read value into a patch.
 - `lightLevel` patches on a turned-off bulb are silently ignored, and a patch
   combining `isOn` with `lightLevel` applies only the `isOn` — always send them
   as separate patches, on first. A bulb switched off remembers its level at that
