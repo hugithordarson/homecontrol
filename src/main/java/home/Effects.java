@@ -360,11 +360,19 @@ public class Effects {
 				step++;
 
 				for( int i = 0; i < _colors.size(); i++ ) {
+					final BulbColor current = _colors.get( ( i + step - 1 ) % _colors.size() );
 					final BulbColor target = _colors.get( ( i + step ) % _colors.size() );
 
 					try {
-						Hub.setAttributes( _colors.get( i ).deviceId(),
-								Map.of( "colorHue", target.hue(), "colorSaturation", target.saturation() ), TRANSITION_MS );
+						// Hue glides alone: a combined hue+sat move can cut through the
+						// middle of the color space (a brief desaturated brightness spike),
+						// while a pure hue move sweeps the saturated rim. Saturation only
+						// gets its own patch when the palette actually varies in it.
+						Hub.setAttributes( _colors.get( i ).deviceId(), Map.of( "colorHue", target.hue() ), TRANSITION_MS );
+
+						if( Math.abs( target.saturation() - current.saturation() ) >= 0.05 ) {
+							Hub.setAttributes( _colors.get( i ).deviceId(), Map.of( "colorSaturation", target.saturation() ), TRANSITION_MS );
+						}
 					}
 					catch( final Exception e ) {
 						// A missed glide is no tragedy — the next step catches up
