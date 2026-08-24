@@ -61,6 +61,17 @@ than one.
   level 1 must repay the original brightness on the next turn-on (see the
   pending-level-restore bookkeeping in Hub).
 
+## When the hub is "unreachable" but the network is fine
+
+If the app logs "No route to host" for a hub that ping and curl reach happily
+from the same machine, it's macOS Local Network privacy (Sequoia+) denying the
+JVM: System Settings → Privacy & Security → Local Network needs the Eclipse
+that's actually running (an Eclipse update = new path = new app identity = new
+permission entry — the old grant means nothing), followed by an Eclipse restart.
+The denied process gets a fake "No route to host", indistinguishable from a
+network problem. Diagnosed 2026-08-24 after an Eclipse update; the same JBR
+binary connected fine from Terminal while Eclipse-launched JVMs were refused.
+
 ## Building and running
 
 Standard wonder-slim / vermilingua setup, same as the Vacation project:
