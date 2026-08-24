@@ -27,6 +27,8 @@ import home.dirigera.DirigeraClient;
 
 public class Hub {
 
+	private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger( Hub.class );
+
 	private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
 	private static List<HubConfig> _hubs;
@@ -123,6 +125,7 @@ public class Hub {
 						}
 					}
 					catch( final Exception e ) {
+						logger.warn( "Fetch from hub '{}' ({}) failed: {}", hub.name(), hub.address(), e.toString() );
 						_downHubs.put( hub.address(), System.currentTimeMillis() + HUB_RETRY_MS );
 						_fetchErrors.add( "%s: %s".formatted( hub.name(), e.getMessage() ) );
 					}
@@ -151,9 +154,11 @@ public class Hub {
 		Thread.ofVirtual().name( "hub-probe" ).start( () -> {
 			try {
 				client( hub ).devices();
+				logger.info( "Hub '{}' is reachable again", hub.name() );
 				_downHubs.remove( hub.address() );
 			}
 			catch( final Exception e ) {
+				logger.warn( "Probe of hub '{}' ({}) failed: {}", hub.name(), hub.address(), e.toString() );
 				_downHubs.put( hub.address(), System.currentTimeMillis() + HUB_RETRY_MS );
 			}
 			finally {
