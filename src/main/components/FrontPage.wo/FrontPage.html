@@ -54,6 +54,9 @@
 							<wo:if condition="$currentLight.supportsColor">
 								<wo:container elementName="input" type="color" class="swatch" value="$currentLightColorHex" oninput="$currentLightColorJS" />
 							</wo:if>
+							<wo:if condition="$currentLightHasTemperatureSlider">
+								<wo:container elementName="input" type="range" class="temp" title="Color temperature" min="$currentLightWarmest" max="$currentLightColdest" step="50" value="$currentLightTemperature" oninput="$currentLightTemperatureJS" />
+							</wo:if>
 							<wo:if condition="$currentLight.dimmable">
 								<wo:container elementName="button" class="lightbolt" title="Strobe this bulb" onclick="$currentLightBoltJS">&#9889;</wo:container>
 							</wo:if>

@@ -132,6 +132,30 @@ public class FrontPage extends HomeComponent {
 		return "hc.color('%s', this.value)".formatted( currentLight.id() );
 	}
 
+	/**
+	 * White-spectrum bulbs get a temperature slider; color bulbs keep their swatch
+	 */
+	public boolean currentLightHasTemperatureSlider() {
+		return currentLight.supportsColorTemperature() && !currentLight.supportsColor();
+	}
+
+	public int currentLightTemperature() {
+		final Integer kelvin = currentLight.attributes() != null ? currentLight.attributes().colorTemperature() : null;
+		return kelvin != null ? kelvin : 2700;
+	}
+
+	public int currentLightWarmest() {
+		return currentLight.warmestTemperature();
+	}
+
+	public int currentLightColdest() {
+		return currentLight.coldestTemperature();
+	}
+
+	public String currentLightTemperatureJS() {
+		return "hc.temp('%s', this.value)".formatted( currentLight.id() );
+	}
+
 	public String currentLightBoltJS() {
 		return "hc.strike('/api/effect/lightning?device=%s')".formatted( currentLight.id() );
 	}

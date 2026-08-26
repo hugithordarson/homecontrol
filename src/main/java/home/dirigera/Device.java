@@ -87,6 +87,19 @@ public record Device(
 	}
 
 	/**
+	 * The hub names the temperature range in mired-think: colorTemperatureMax is the
+	 * WARMEST Kelvin value (lowest number) and colorTemperatureMin the coldest.
+	 * These accessors translate to what a human means.
+	 */
+	public int warmestTemperature() {
+		return attributes != null && attributes.colorTemperatureMax() != null ? attributes.colorTemperatureMax() : 2202;
+	}
+
+	public int coldestTemperature() {
+		return attributes != null && attributes.colorTemperatureMin() != null ? attributes.colorTemperatureMin() : 4000;
+	}
+
+	/**
 	 * @return true if this is a color bulb currently showing a color (rather than a white temperature)
 	 */
 	public boolean inColorMode() {

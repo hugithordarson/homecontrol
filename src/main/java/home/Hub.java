@@ -269,6 +269,10 @@ public class Hub {
 		setAttributes( deviceId, Map.of( "lightLevel", clamp( level, 1, 100 ) ) );
 	}
 
+	public static void setTemperature( final String deviceId, final int kelvin ) {
+		setAttributes( deviceId, Map.of( "colorTemperature", kelvin ) );
+	}
+
 	public static void setColor( final String deviceId, final double hue, final double saturation ) {
 		setAttributes( deviceId, Map.of(
 				"colorHue", clamp( hue, 0, 360 ),

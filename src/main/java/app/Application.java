@@ -29,6 +29,7 @@ public class Application extends ERXApplication {
 		RouteTable.defaultRouteTable().map( "/api/toggle/*", this::toggleDevice );
 		RouteTable.defaultRouteTable().map( "/api/level/*", this::deviceLevel );
 		RouteTable.defaultRouteTable().map( "/api/color/*", this::deviceColor );
+		RouteTable.defaultRouteTable().map( "/api/temperature/*", this::deviceTemperature );
 		RouteTable.defaultRouteTable().map( "/api/scene/*", this::applyScene );
 		RouteTable.defaultRouteTable().map( "/api/rename-room/*", this::renameRoom );
 		RouteTable.defaultRouteTable().map( "/api/effect/*", this::effect );
@@ -80,6 +81,26 @@ public class Application extends ERXApplication {
 		}
 		catch( final NumberFormatException e ) {
 			return badRequest( "Not a light level: " + components[1] );
+		}
+
+		return ok();
+	}
+
+	/**
+	 * /api/temperature/[deviceId]/[kelvin]
+	 */
+	private WOActionResults deviceTemperature( RouteInvocation invocation ) {
+		final String[] components = pathComponents( invocation, "/api/temperature/" );
+
+		if( components.length != 2 ) {
+			return badRequest( "Expected /api/temperature/[deviceId]/[kelvin]" );
+		}
+
+		try {
+			Hub.setTemperature( components[0], Integer.parseInt( components[1] ) );
+		}
+		catch( final NumberFormatException e ) {
+			return badRequest( "Not a color temperature: " + components[1] );
 		}
 
 		return ok();

@@ -48,6 +48,9 @@ than one.
 - The hub reports attribute values it refuses to accept back: bulbs report
   colorSaturation slightly above 1.0 (e.g. 1.0022), but writing anything above
   1.0 fails. Clamp before echoing any read value into a patch.
+- The temperature range fields are named in mired-think: colorTemperatureMax is
+  the WARMEST Kelvin value (e.g. 2202) and colorTemperatureMin the coldest
+  (e.g. 4000). Device.warmestTemperature()/coldestTemperature() translate.
 - colorHue and colorSaturation must be patched TOGETHER — either alone gets 400
   ("attributes does not match any of the allowed types"). Opposite rule from
   isOn/lightLevel, which must be separate. There is no consistency; test.
