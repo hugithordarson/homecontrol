@@ -1,0 +1,15 @@
+[Unit]
+Description=javamonitor
+After=wotaskd.service
+AssertPathExists=/opt/webobjects/log
+AssertPathExists=/opt/webobjects/apps/JavaMonitor.woa
+
+[Service]
+User=hugi
+Group=hugi
+ExecStart=/opt/webobjects/apps/JavaMonitor.woa/JavaMonitor -WOPort 56789 -DWODeploymentConfigurationDirectory=/opt/webobjects/conf -Xms32m -Xmx64m
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

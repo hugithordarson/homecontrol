@@ -1,0 +1,64 @@
+<SiteConfig type="NSDictionary">
+	<applicationArray type="NSArray">
+		<element type="NSDictionary">
+			<adaptor type="NSString">WODefaultAdaptor</adaptor>
+			<adaptorThreads type="NSNumber">8</adaptorThreads>
+			<adaptorThreadsMax type="NSNumber">256</adaptorThreadsMax>
+			<adaptorThreadsMin type="NSNumber">16</adaptorThreadsMin>
+			<additionalArgs type="NSString">-Xmx256M -WOHost 10.0.1.40 -WOAllowsConcurrentRequestHandling YES</additionalArgs>
+			<autoOpenInBrowser type="NSString">NO</autoOpenInBrowser>
+			<autoRecover type="NSString">YES</autoRecover>
+			<cachingEnabled type="NSString">YES</cachingEnabled>
+			<debuggingEnabled type="NSString">NO</debuggingEnabled>
+			<lifebeatInterval type="NSNumber">30</lifebeatInterval>
+			<listenQueueSize type="NSNumber">128</listenQueueSize>
+			<minimumActiveSessionsCount type="NSNumber">0</minimumActiveSessionsCount>
+			<name type="NSString">HomeControl</name>
+			<notificationEmailEnabled type="NSString">NO</notificationEmailEnabled>
+			<phasedStartup type="NSString">YES</phasedStartup>
+			<projectSearchPath type="NSString">()</projectSearchPath>
+			<sessionTimeOut type="NSNumber">3600</sessionTimeOut>
+			<startingPort type="NSNumber">2001</startingPort>
+			<statisticsPassword type="NSString"></statisticsPassword>
+			<timeForStartup type="NSNumber">30</timeForStartup>
+			<unixOutputPath type="NSString">/opt/webobjects/log/HomeControl</unixOutputPath>
+			<unixPath type="NSString">/opt/webobjects/apps/HomeControl.woa/HomeControl</unixPath>
+		</element>
+	</applicationArray>
+	<hostArray type="NSArray">
+		<element type="NSDictionary">
+			<name type="NSString">10.0.1.40</name>
+			<type type="NSString">UNIX</type>
+		</element>
+	</hostArray>
+	<instanceArray type="NSArray">
+		<element type="NSDictionary">
+			<additionalArgs type="NSString">-Xmx256M -WOHost 10.0.1.40 -WOAllowsConcurrentRequestHandling YES</additionalArgs>
+			<applicationName type="NSString">HomeControl</applicationName>
+			<autoOpenInBrowser type="NSString">NO</autoOpenInBrowser>
+			<autoRecover type="NSString">YES</autoRecover>
+			<cachingEnabled type="NSString">YES</cachingEnabled>
+			<debuggingEnabled type="NSString">NO</debuggingEnabled>
+			<gracefulScheduling type="NSString">YES</gracefulScheduling>
+			<hostName type="NSString">10.0.1.40</hostName>
+			<id type="NSNumber">1</id>
+			<lifebeatInterval type="NSNumber">30</lifebeatInterval>
+			<minimumActiveSessionsCount type="NSNumber">0</minimumActiveSessionsCount>
+			<outputPath type="NSString">/opt/webobjects/log/HomeControl-1</outputPath>
+			<path type="NSString">/opt/webobjects/apps/HomeControl.woa/HomeControl</path>
+			<port type="NSNumber">2001</port>
+			<schedulingDailyStartTime type="NSNumber">3</schedulingDailyStartTime>
+			<schedulingEnabled type="NSString">NO</schedulingEnabled>
+			<schedulingHourlyStartTime type="NSNumber">3</schedulingHourlyStartTime>
+			<schedulingInterval type="NSNumber">12</schedulingInterval>
+			<schedulingStartDay type="NSNumber">1</schedulingStartDay>
+			<schedulingType type="NSString">DAILY</schedulingType>
+			<schedulingWeeklyStartTime type="NSNumber">3</schedulingWeeklyStartTime>
+		</element>
+	</instanceArray>
+	<site type="NSDictionary">
+		<password type="NSString">WOTASKD_PASSWORD_HASH</password>
+		<viewRefreshEnabled type="NSString">YES</viewRefreshEnabled>
+		<viewRefreshRate type="NSNumber">60</viewRefreshRate>
+	</site>
+</SiteConfig>
