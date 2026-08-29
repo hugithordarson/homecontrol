@@ -21,6 +21,7 @@ public class Application extends ERXApplication {
 	private void setupRoutes() {
 		RouteTable.defaultRouteTable().map( "/", FrontPage.class );
 		RouteTable.defaultRouteTable().map( "/scenes", ScenesPage.class );
+		RouteTable.defaultRouteTable().map( "/floor", home.components.FloorPage.class );
 		RouteTable.defaultRouteTable().map( "/setup", SetupPage.class );
 
 		// The control endpoints the dashboard's javascript talks to
@@ -32,6 +33,8 @@ public class Application extends ERXApplication {
 		RouteTable.defaultRouteTable().map( "/api/temperature/*", this::deviceTemperature );
 		RouteTable.defaultRouteTable().map( "/api/scene/*", this::applyScene );
 		RouteTable.defaultRouteTable().map( "/api/rename-room/*", this::renameRoom );
+		RouteTable.defaultRouteTable().map( "/api/room-color/*", this::roomColor );
+		RouteTable.defaultRouteTable().map( "/api/room-level/*", this::roomLevel );
 		RouteTable.defaultRouteTable().map( "/api/effect/*", this::effect );
 		RouteTable.defaultRouteTable().map( "/api/cycle/*", this::toggleCycle );
 	}
@@ -145,6 +148,46 @@ public class Application extends ERXApplication {
 		}
 
 		Hub.renameRoom( lastPathComponent( invocation ), name.trim() );
+		return ok();
+	}
+
+	/**
+	 * /api/room-color/[roomId]/[hue 0-360]/[saturation 0-1]
+	 */
+	private WOActionResults roomColor( RouteInvocation invocation ) {
+		final String[] components = pathComponents( invocation, "/api/room-color/" );
+
+		if( components.length != 3 ) {
+			return badRequest( "Expected /api/room-color/[roomId]/[hue]/[saturation]" );
+		}
+
+		try {
+			Hub.setRoomColor( components[0], Double.parseDouble( components[1] ), Double.parseDouble( components[2] ) );
+		}
+		catch( final NumberFormatException e ) {
+			return badRequest( "Not a color: %s/%s".formatted( components[1], components[2] ) );
+		}
+
+		return ok();
+	}
+
+	/**
+	 * /api/room-level/[roomId]/[1-100]
+	 */
+	private WOActionResults roomLevel( RouteInvocation invocation ) {
+		final String[] components = pathComponents( invocation, "/api/room-level/" );
+
+		if( components.length != 2 ) {
+			return badRequest( "Expected /api/room-level/[roomId]/[1-100]" );
+		}
+
+		try {
+			Hub.setRoomLevel( components[0], Integer.parseInt( components[1] ) );
+		}
+		catch( final NumberFormatException e ) {
+			return badRequest( "Not a light level: " + components[1] );
+		}
+
 		return ok();
 	}
 

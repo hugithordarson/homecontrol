@@ -131,6 +131,20 @@
 						src.stop( start + dur );
 					}
 				},
+				floorSel: null,
+				_roomLevelTimers: {},
+				roomLevel: function( id, value ) {
+					clearTimeout( hc._roomLevelTimers[id] );
+					hc._roomLevelTimers[id] = setTimeout( function() { hc.post( '/api/room-level/' + id + '/' + value ); }, 200 );
+				},
+				_roomColorTimers: {},
+				roomColor: function( id, hex ) {
+					clearTimeout( hc._roomColorTimers[id] );
+					hc._roomColorTimers[id] = setTimeout( function() {
+						var hs = hc.hexToHueSat( hex );
+						hc.post( '/api/room-color/' + id + '/' + hs.hue + '/' + hs.sat );
+					}, 200 );
+				},
 				cycle: function( id ) {
 					hc.post( '/api/cycle/' + id ).then( hc.reloadSoon );
 				},
@@ -172,6 +186,7 @@
 		<nav>
 			<span class="brand"><a href="/">HomeControl</a></span>
 			<a href="/">Lights</a>
+			<a href="/floor">Floor plan</a>
 			<a href="/scenes">Scenes</a>
 			<a href="/setup">Setup</a>
 		</nav>

@@ -1,0 +1,19 @@
+{
+	"comment": "Schematic floor plan traced from the architect's drawing, coordinates in mm. hubRoom must match a room name on the hub exactly — null means the region is display-only. Rooms marked (guess) in the mapping were inferred from furniture symbols; correct freely.",
+	"regions": [
+		{ "id": "stairs", "name": "Stigagangur", "hubRoom": null, "polygon": [[300,300],[3240,300],[3240,2880],[300,2880]], "label": [1770,1700] },
+		{ "id": "forstofa", "name": "Forstofa", "hubRoom": "Forstofa", "polygon": [[300,2880],[3240,2880],[3240,5050],[300,5050]], "label": [1770,4050] },
+		{ "id": "office", "name": "Skrifstofa", "hubRoom": "Skrifstofa", "polygon": [[300,5050],[3380,5050],[3380,7630],[300,7630]], "label": [1840,6440] },
+		{ "id": "room97", "name": "Herbergi 9,7", "hubRoom": null, "polygon": [[300,7630],[3380,7630],[3380,10750],[300,10750]], "label": [1840,9250] },
+		{ "id": "kitchen", "name": "Eldhús", "hubRoom": "Kitchen", "polygon": [[3500,300],[7240,300],[7240,3300],[3500,3300]], "label": [5350,1900] },
+		{ "id": "dining", "name": "Borðstofa", "hubRoom": "Borðstofa", "polygon": [[3500,3300],[7390,3300],[7390,5140],[8750,5140],[8750,6500],[3500,6500]], "label": [5800,4900] },
+		{ "id": "living", "name": "Stofan", "hubRoom": "Stofan", "polygon": [[3500,6500],[8750,6500],[8750,10750],[3500,10750]], "label": [6100,8700] },
+		{ "id": "bath", "name": "Baðherbergi", "hubRoom": "Baðherbergi", "polygon": [[7390,300],[9780,300],[9780,3300],[7390,3300]], "label": [8580,1900] },
+		{ "id": "corridor", "name": "Gangur", "hubRoom": "Gangur", "polygon": [[7390,3300],[9900,3300],[9900,5140],[10380,5140],[10380,10750],[8870,10750],[8870,5140],[7390,5140]], "label": [9600,7500] },
+		{ "id": "bedroom", "name": "Svefnherbergi", "hubRoom": "Svefnherbergi", "polygon": [[9900,300],[13100,300],[13100,5140],[9900,5140]], "label": [11500,2800] },
+		{ "id": "room111", "name": "Herbergi 11,1", "hubRoom": null, "polygon": [[10500,5260],[13100,5260],[13100,9550],[10500,9550]], "label": [11800,7400] },
+		{ "id": "storage-ne", "name": "Geymsla", "hubRoom": null, "polygon": [[13400,300],[15000,300],[15000,4550],[13400,4550]], "label": [14200,2450] },
+		{ "id": "storage-se", "name": "Geymsla", "hubRoom": null, "polygon": [[10380,9670],[13100,9670],[13100,11300],[10380,11300]], "label": [11740,10500] },
+		{ "id": "balcony", "name": "Svalir", "hubRoom": null, "polygon": [[6900,10900],[10230,10900],[10230,12400],[6900,12400]], "label": [8560,11700] }
+	]
+}

@@ -1,0 +1,61 @@
+<wo:PageWrapper title="Floor plan" width="1240px">
+	<style>
+		.floorwrap { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+		.floorwrap svg { flex: 1 1 640px; max-width: 900px; background: #0e1013; border-radius: 12px; }
+		.region { stroke: #454d59; stroke-width: 60; cursor: default; }
+		.region.mapped { cursor: pointer; }
+		.region.mapped:hover { stroke: #9fb3c8; }
+		.region.selected { stroke: #ffc66d; stroke-width: 100; }
+		.roomlabel { fill: #8a93a1; font-size: 380px; font-family: system-ui, sans-serif; pointer-events: none; }
+		.region.on + .roomlabel { fill: #e6e6e6; }
+		#floorpanel { flex: 0 0 250px; background: #20242c; border-radius: 12px; padding: 16px; display: none; }
+		#floorpanel h2 { margin: 0 0 12px; font-size: 1.1em; }
+		#floorpanel .row { display: flex; gap: 8px; margin: 10px 0; align-items: center; }
+		#floorpanel input[type=range] { width: 100%; accent-color: #ffc66d; }
+		#floorpanel input[type=color] { width: 44px; height: 34px; border: none; background: none; padding: 0; cursor: pointer; }
+	</style>
+
+	<div class="floorwrap">
+		<svg viewBox="0 0 15200 12600" xmlns="http://www.w3.org/2000/svg">
+			<rect x="150" y="150" width="13100" height="10750" fill="none" stroke="#5a6472" stroke-width="300" />
+			<wo:repetition list="$regions" item="$currentRegion">
+				<wo:container elementName="polygon" points="$currentPoints" class="$currentCss" fill="$currentFill" data-room="$currentRoomId" data-name="$currentRegion.name" data-hascolor="$currentHasColor" onclick="floorPick(this)" />
+				<wo:container elementName="text" x="$currentLabelX" y="$currentLabelY" class="roomlabel" text-anchor="middle"><wo:str value="$currentRegion.name" /></wo:container>
+			</wo:repetition>
+		</svg>
+
+		<div id="floorpanel">
+			<h2 id="fpName"></h2>
+			<div class="row">
+				<button onclick="hc.room(hc.floorSel, 'on')">On</button>
+				<button onclick="hc.room(hc.floorSel, 'off')">Off</button>
+				<button class="roombolt" onclick="hc.strike('/api/effect/lightning?room=' + hc.floorSel)">&#9889;</button>
+				<button class="roomcycle" onclick="hc.cycle(hc.floorSel)">&#8635;</button>
+			</div>
+			<div class="row">
+				<input type="range" min="1" max="100" value="60" oninput="hc.roomLevel(hc.floorSel, this.value)" title="Brightness" />
+			</div>
+			<div class="row" id="fpColorRow">
+				<input type="color" value="#ffc66d" oninput="hc.roomColor(hc.floorSel, this.value)" title="Room color" />
+				<span class="hint">Room color</span>
+			</div>
+		</div>
+	</div>
+
+	<p class="hint">Regions show live light state — click a room to control it. Mappings live in floorplan.json.</p>
+
+	<script>
+		function floorPick( el ) {
+			if( !el.dataset.room ) { return; }
+			hc.floorSel = el.dataset.room;
+			document.querySelectorAll( '.region.selected' ).forEach( function( r ) { r.classList.remove( 'selected' ); } );
+			el.classList.add( 'selected' );
+			document.getElementById( 'fpName' ).textContent = el.dataset.name;
+			document.getElementById( 'fpColorRow' ).style.display = el.dataset.hascolor === 'true' ? 'flex' : 'none';
+			document.getElementById( 'floorpanel' ).style.display = 'block';
+		}
+
+		// Keep the state display fresh-ish until we grow a live feed
+		setTimeout( function() { if( !document.hidden ) { location.reload(); } }, 15000 );
+	</script>
+</wo:PageWrapper>

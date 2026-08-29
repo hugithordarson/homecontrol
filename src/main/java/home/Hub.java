@@ -269,6 +269,27 @@ public class Hub {
 		setAttributes( deviceId, Map.of( "lightLevel", clamp( level, 1, 100 ) ) );
 	}
 
+	/**
+	 * Paints every color-capable light in a room — the floor plan's room color picker
+	 */
+	public static void setRoomColor( final String roomId, final double hue, final double saturation ) {
+		for( final Device light : lights() ) {
+			if( light.roomId().equals( roomId ) && light.reachable() && light.supportsColor() ) {
+				setAttributes( light.id(), Map.of(
+						"colorHue", clamp( hue, 0, 360 ),
+						"colorSaturation", clamp( saturation, 0, 1 ) ) );
+			}
+		}
+	}
+
+	public static void setRoomLevel( final String roomId, final int level ) {
+		for( final Device light : lights() ) {
+			if( light.roomId().equals( roomId ) && light.reachable() && light.dimmable() ) {
+				setAttributes( light.id(), Map.of( "lightLevel", clamp( level, 1, 100 ) ) );
+			}
+		}
+	}
+
 	public static void setTemperature( final String deviceId, final int kelvin ) {
 		setAttributes( deviceId, Map.of( "colorTemperature", kelvin ) );
 	}
