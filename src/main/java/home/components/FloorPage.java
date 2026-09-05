@@ -23,7 +23,7 @@ public class FloorPage extends HomeComponent {
 
 	private static final Gson gson = new Gson();
 
-	public record Region( String id, String name, String hubRoom, List<List<Double>> polygon, List<Double> label ) {}
+	public record Region( String id, String name, String hubRoom, List<List<Double>> polygon, List<Double> label, Integer labelSize ) {}
 
 	record FloorPlan( List<Region> regions ) {}
 
@@ -122,6 +122,13 @@ public class FloorPage extends HomeComponent {
 
 	public String currentLabelY() {
 		return String.valueOf( currentRegion.label().get( 1 ).intValue() );
+	}
+
+	/**
+	 * @return An inline font-size for regions too narrow for the default label size
+	 */
+	public String currentLabelStyle() {
+		return currentRegion.labelSize() != null ? "font-size: " + currentRegion.labelSize() + "px" : "";
 	}
 
 	public String currentRoomId() {

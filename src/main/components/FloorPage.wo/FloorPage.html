@@ -19,10 +19,10 @@
 
 	<div class="floorwrap">
 		<svg viewBox="0 0 15200 12600" xmlns="http://www.w3.org/2000/svg">
-			<rect x="150" y="150" width="13100" height="10750" fill="none" stroke="#5a6472" stroke-width="300" />
+			<rect x="300" y="300" width="12800" height="10450" fill="none" stroke="#5a6472" stroke-width="200" />
 			<wo:repetition list="$regions" item="$currentRegion">
 				<wo:container elementName="polygon" points="$currentPoints" class="$currentCss" fill="$currentFill" data-room="$currentRoomId" data-name="$currentRegion.name" data-hascolor="$currentHasColor" onclick="floorPick(this)" />
-				<wo:container elementName="text" x="$currentLabelX" y="$currentLabelY" class="roomlabel" text-anchor="middle"><wo:str value="$currentRegion.name" /></wo:container>
+				<wo:container elementName="text" x="$currentLabelX" y="$currentLabelY" class="roomlabel" style="$currentLabelStyle" text-anchor="middle"><wo:str value="$currentRegion.name" /></wo:container>
 			</wo:repetition>
 		</svg>
 
