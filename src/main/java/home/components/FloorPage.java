@@ -28,6 +28,7 @@ public class FloorPage extends HomeComponent {
 	record FloorPlan( List<Region> regions ) {}
 
 	public Region currentRegion;
+	public Device currentLight;
 
 	private FloorPlan _plan;
 	private Map<String, Hub.RoomGroup> _groupsByName;
@@ -126,6 +127,60 @@ public class FloorPage extends HomeComponent {
 	public String currentRoomId() {
 		final Hub.RoomGroup group = currentGroup();
 		return group != null ? group.id() : "";
+	}
+
+	/**
+	 * @return The selected region's lights, for the panel's list (empty for unmapped regions)
+	 */
+	public List<Device> currentRegionLights() {
+		final Hub.RoomGroup group = currentGroup();
+		return group != null ? group.lights() : List.of();
+	}
+
+	public String currentLightRowClass() {
+		return "light" + ( currentLight.on() ? " on" : "" ) + ( currentLight.reachable() ? "" : " unreachable" );
+	}
+
+	public String currentLightBulbStyle() {
+		if( !currentLight.on() || !currentLight.inColorMode() || currentLight.attributes().colorHue() == null ) {
+			return "";
+		}
+
+		final int rgb = java.awt.Color.HSBtoRGB(
+				(float)(currentLight.attributes().colorHue() / 360d),
+				(float)Math.clamp( currentLight.attributes().colorSaturation() == null ? 1d : currentLight.attributes().colorSaturation(), 0d, 1d ),
+				1f );
+		return "color: #%06x".formatted( rgb & 0xffffff );
+	}
+
+	public String currentLightToggleJS() {
+		return "hc.toggle('%s')".formatted( currentLight.id() );
+	}
+
+	public String currentLightMeta() {
+		if( !currentLight.reachable() ) {
+			return "unreachable";
+		}
+
+		if( !currentLight.on() ) {
+			return "off";
+		}
+
+		final StringBuilder sb = new StringBuilder();
+		final Integer level = currentLight.attributes() != null ? currentLight.attributes().lightLevel() : null;
+
+		if( currentLight.dimmable() && level != null ) {
+			sb.append( level ).append( '%' );
+		}
+
+		if( currentLight.inColorMode() ) {
+			sb.append( " · color" );
+		}
+		else if( currentLight.supportsColorTemperature() && currentLight.attributes().colorTemperature() != null ) {
+			sb.append( " · " ).append( currentLight.attributes().colorTemperature() ).append( " K" );
+		}
+
+		return sb.toString();
 	}
 
 	public String currentHasColor() {

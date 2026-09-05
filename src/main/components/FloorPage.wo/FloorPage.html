@@ -13,6 +13,8 @@
 		#floorpanel .row { display: flex; gap: 8px; margin: 10px 0; align-items: center; }
 		#floorpanel input[type=range] { width: 100%; accent-color: #ffc66d; }
 		#floorpanel input[type=color] { width: 44px; height: 34px; border: none; background: none; padding: 0; cursor: pointer; }
+		.fplights { margin-top: 12px; border-top: 1px solid #39414e; padding-top: 6px; }
+		.fplights .light { cursor: default; }
 	</style>
 
 	<div class="floorwrap">
@@ -39,6 +41,17 @@
 				<input type="color" value="#ffc66d" oninput="hc.roomColor(hc.floorSel, this.value)" title="Room color" />
 				<span class="hint">Room color</span>
 			</div>
+			<wo:repetition list="$regions" item="$currentRegion">
+				<wo:container elementName="div" class="fplights" data-room="$currentRoomId" hidden="hidden">
+					<wo:repetition list="$currentRegionLights" item="$currentLight">
+						<wo:container elementName="div" class="$currentLightRowClass">
+							<wo:container elementName="button" class="bulb" style="$currentLightBulbStyle" onclick="$currentLightToggleJS" title="Toggle">&#9679;</wo:container>
+							<span class="lightname"><wo:str value="$currentLight.name" /></span>
+							<span class="lightmeta"><wo:str value="$currentLightMeta" /></span>
+						</wo:container>
+					</wo:repetition>
+				</wo:container>
+			</wo:repetition>
 		</div>
 	</div>
 
@@ -52,6 +65,7 @@
 			el.classList.add( 'selected' );
 			document.getElementById( 'fpName' ).textContent = el.dataset.name;
 			document.getElementById( 'fpColorRow' ).style.display = el.dataset.hascolor === 'true' ? 'flex' : 'none';
+			document.querySelectorAll( '.fplights' ).forEach( function( l ) { l.hidden = l.dataset.room !== el.dataset.room; } );
 			document.getElementById( 'floorpanel' ).style.display = 'block';
 		}
 
