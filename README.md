@@ -16,8 +16,14 @@ than one.
 
 ## What it does
 
-- `/` — the dashboard: all lights grouped by room, with per-light toggles and
-  brightness sliders, per-room on/off, all on/off, and one-click scene buttons.
+- `/` — the dashboard: all lights grouped by room, as a selection surface. Tap
+  lights or room names to select (Select all / Select none in the toolbar); the
+  panel at the bottom controls the whole selection — on/off, brightness, warmth,
+  color, lightning — through one /api/batch request. Palette chips
+  (woresources/palette.json) apply on tap or can be dragged onto any light or room.
+- `/floor` — the apartment floor plan (woresources/floorplan.json, mm coordinates
+  traced from the architect's drawing) with live room state; click a room to
+  control it and see its lights.
 - `/scenes` — scene management. Arrange the lights how you want them, then
   capture the current state as a named scene. Scenes are stored locally in
   `~/.homecontrol/scenes.json`, independent of the hub's own scene storage.
