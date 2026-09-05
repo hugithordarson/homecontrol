@@ -178,7 +178,16 @@
 					// Seed the sliders/swatch from the first selected light's state
 					var first = els[0];
 					var lvl = panel.querySelector( '#selLevelRow input' ); if( lvl ) { lvl.value = first.dataset.level; }
-					var tmp = panel.querySelector( '#selTempRow input' ); if( tmp ) { tmp.value = first.dataset.kelvin; }
+					// Warmth slider spans the range every selected temp-capable bulb can honor
+					var tmp = panel.querySelector( '#selTempRow input' );
+					if( tmp ) {
+						var temps = els.filter( function( el ) { return el.dataset.temp === 'true'; } );
+						if( temps.length ) {
+							tmp.min = Math.max.apply( null, temps.map( function( el ) { return parseInt( el.dataset.warm, 10 ); } ) );
+							tmp.max = Math.min.apply( null, temps.map( function( el ) { return parseInt( el.dataset.cold, 10 ); } ) );
+						}
+						tmp.value = first.dataset.kelvin;
+					}
 					var col = panel.querySelector( '#selColorRow input' ); if( col && first.dataset.hex ) { col.value = first.dataset.hex; }
 				},
 				batch: function( attrs, ids ) {
