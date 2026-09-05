@@ -143,6 +143,10 @@
 					} );
 					hc.saveSelection(); hc.updatePanel();
 				},
+				selectAll: function() {
+					document.querySelectorAll( '.light' ).forEach( function( el ) { hc.sel.add( el.dataset.id ); el.classList.add( 'selected' ); } );
+					hc.saveSelection(); hc.updatePanel();
+				},
 				clearSelection: function() {
 					hc.sel.clear();
 					document.querySelectorAll( '.light.selected' ).forEach( function( el ) { el.classList.remove( 'selected' ); } );

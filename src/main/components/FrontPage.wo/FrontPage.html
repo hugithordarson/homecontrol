@@ -19,6 +19,7 @@
 		<div class="toolbar">
 			<button class="big" onclick="hc.all('on')">All on</button>
 			<button class="big off" onclick="hc.all('off')">All off</button>
+			<button onclick="hc.selectAll()" title="Select every light">Select all</button>
 			<button class="bolt" title="Lightning strike, whole house" onclick="hc.strike('/api/effect/lightning')">&#9889;</button>
 			<button id="thunderToggle" onclick="hc.toggleThunder()">&#128263; Thunder off</button>
 			<wo:if condition="$hasScenes">
