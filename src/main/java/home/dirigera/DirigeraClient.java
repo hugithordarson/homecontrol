@@ -33,9 +33,18 @@ public class DirigeraClient {
 
 	private static final Gson gson = new Gson();
 
+	/**
+	 * The hub's tiny HTTP server can't accept a burst of TLS handshakes: fanning a
+	 * whole-house update out as twenty simultaneous connections gets half of them
+	 * a connect timeout. Every request to a hub passes this gate, so bursts become
+	 * a short orderly queue over a few warm, reused connections.
+	 */
+	private static final int MAX_CONCURRENT_REQUESTS = 6;
+
 	private final String _hubAddress;
 	private final String _token;
 	private final HttpClient _http;
+	private final java.util.concurrent.Semaphore _permits = new java.util.concurrent.Semaphore( MAX_CONCURRENT_REQUESTS, true );
 
 	public DirigeraClient( final String hubAddress, final String token ) {
 		_hubAddress = hubAddress;
@@ -106,6 +115,23 @@ public class DirigeraClient {
 
 	private String send( final HttpRequest request, final int... acceptedStatuses ) {
 		try {
+			_permits.acquire();
+
+			try {
+				return sendOnce( request, acceptedStatuses, true );
+			}
+			finally {
+				_permits.release();
+			}
+		}
+		catch( final InterruptedException e ) {
+			Thread.currentThread().interrupt();
+			throw new DirigeraException( "Interrupted while waiting to talk to the hub", e );
+		}
+	}
+
+	private String sendOnce( final HttpRequest request, final int[] acceptedStatuses, final boolean retryOnConnectFailure ) {
+		try {
 			final HttpResponse<String> response = _http.send( request, BodyHandlers.ofString() );
 
 			for( final int status : acceptedStatuses ) {
@@ -115,6 +141,21 @@ public class DirigeraClient {
 			}
 
 			throw new DirigeraException( "Hub returned %s: %s".formatted( response.statusCode(), response.body() ) );
+		}
+		catch( final java.net.http.HttpConnectTimeoutException | java.net.ConnectException e ) {
+			// A momentarily overloaded hub gets one more chance before a light is given up on
+			if( retryOnConnectFailure ) {
+				try {
+					Thread.sleep( 250 );
+				}
+				catch( final InterruptedException ie ) {
+					Thread.currentThread().interrupt();
+				}
+
+				return sendOnce( request, acceptedStatuses, false );
+			}
+
+			throw new DirigeraException( "Could not reach the hub at " + _hubAddress + ": " + e.getMessage(), e );
 		}
 		catch( final IOException e ) {
 			throw new DirigeraException( "Could not reach the hub at " + _hubAddress + ": " + e.getMessage(), e );

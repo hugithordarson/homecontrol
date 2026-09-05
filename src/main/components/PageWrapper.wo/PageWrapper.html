@@ -80,7 +80,8 @@
 					return body ? fetch( path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify( body ) } )
 					            : fetch( path, { method: 'POST' } );
 				},
-				reloadSoon: function() { setTimeout( function() { location.reload(); }, 500 ); },
+				// The hub applies commands asynchronously (202); give a whole-house change a beat to land before re-reading state
+				reloadSoon: function() { setTimeout( function() { location.reload(); }, 800 ); },
 				all: function( state ) { hc.post( '/api/all/' + state ).then( hc.reloadSoon ); },
 				room: function( id, state ) { hc.post( '/api/room/' + id + '/' + state ).then( hc.reloadSoon ); },
 				toggle: function( id ) { hc.post( '/api/toggle/' + id ).then( hc.reloadSoon ); },

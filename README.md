@@ -54,6 +54,10 @@ than one.
 - colorHue and colorSaturation must be patched TOGETHER — either alone gets 400
   ("attributes does not match any of the allowed types"). Opposite rule from
   isOn/lightLevel, which must be separate. There is no consistency; test.
+- The hub can't take a burst of new connections: ~20 simultaneous TLS handshakes
+  get half of them a connect timeout. DirigeraClient gates every request through
+  a 6-permit semaphore per hub (plus one retry on connect failure) — fan-outs
+  become a short orderly queue over warm, reused connections.
 - Leave generous margin between a transition's duration and the next command to
   the same bulb — a command landing mid-transition makes the bulb snap-complete
   the ongoing one (a visible blink).
