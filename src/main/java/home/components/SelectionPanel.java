@@ -1,31 +1,23 @@
 package home.components;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import com.google.gson.Gson;
 import com.webobjects.appserver.WOContext;
 
 import app.HomeComponent;
+import home.Palette;
 
 /**
  * The selection control panel shared by the dashboard and the floor plan: acts on
  * whatever lights are selected (see the hc.sel machinery in PageWrapper) through
- * one /api/batch request, and carries the palette of preset chips — tap to apply
- * to the selection, drag onto any light or room.
+ * /api/batch requests, and carries the palette of preset chips — tap to apply to
+ * the selection, drag onto any light or room. Multi-color chips deal their colors
+ * out across the target lights; the Mix row composes and saves new ones.
  */
 
 public class SelectionPanel extends HomeComponent {
 
-	private static final Gson gson = new Gson();
-
-	public record Preset( String name, String hex, Integer kelvin ) {}
-
-	record Palette( List<Preset> presets ) {}
-
-	public Preset currentPreset;
-
-	private List<Preset> _presets;
+	public Palette.Preset currentPreset;
 
 	public SelectionPanel( WOContext context ) {
 		super( context );
@@ -36,24 +28,50 @@ public class SelectionPanel extends HomeComponent {
 		return false;
 	}
 
-	public List<Preset> presets() {
-		if( _presets == null ) {
-			final byte[] bytes = application().resourceManager().bytesForResourceNamed( "palette.json", null, null );
-			_presets = gson.fromJson( new String( bytes, StandardCharsets.UTF_8 ), Palette.class ).presets();
-		}
+	public List<Palette.Preset> presets() {
+		return Palette.all();
+	}
 
-		return _presets;
+	public String currentPresetClass() {
+		return "chip" + ( currentPreset.multi() ? " multi" : "" );
 	}
 
 	public String currentPresetStyle() {
+		if( currentPreset.multi() ) {
+			final StringBuilder stops = new StringBuilder();
+			final int n = currentPreset.hexes().size();
+
+			for( int i = 0; i < n; i++ ) {
+				if( i > 0 ) {
+					stops.append( ", " );
+				}
+
+				stops.append( currentPreset.hexes().get( i ) ).append( ' ' ).append( 100 * i / n ).append( "% " ).append( 100 * ( i + 1 ) / n ).append( '%' );
+			}
+
+			return "background: conic-gradient(" + stops + ")";
+		}
+
 		return "background: " + ( currentPreset.hex() != null ? currentPreset.hex() : kelvinHex( currentPreset.kelvin() ) );
 	}
 
 	/**
-	 * @return What the chip carries: a hex color, or "K:2700" for a white temperature
+	 * @return What the chip carries: a hex color, "K:2700" for a white temperature, or "M:#a,#b,#c" for a multi-color set
 	 */
 	public String currentPresetData() {
+		if( currentPreset.multi() ) {
+			return "M:" + String.join( ",", currentPreset.hexes() );
+		}
+
 		return currentPreset.hex() != null ? currentPreset.hex() : "K:" + currentPreset.kelvin();
+	}
+
+	public boolean currentPresetCustom() {
+		return currentPreset.custom();
+	}
+
+	public String currentPresetDeleteJS() {
+		return "event.stopPropagation(); hc.deletePreset('%s')".formatted( currentPreset.name().replace( "'", "\\'" ) );
 	}
 
 	private static String kelvinHex( final int kelvin ) {

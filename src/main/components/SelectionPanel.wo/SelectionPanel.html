@@ -13,9 +13,18 @@
 	<div class="selrow" id="selLevelRow"><span class="lbl">Brightness</span><input type="range" min="1" max="100" oninput="hc.selLevel(this.value)" /></div>
 	<div class="selrow" id="selTempRow"><span class="lbl">Warmth</span><input type="range" class="temp" min="2202" max="4000" step="50" oninput="hc.selTemp(this.value)" /></div>
 	<div class="selrow" id="selColorRow"><span class="lbl">Color</span><input type="color" oninput="hc.selColor(this.value)" /></div>
+	<div class="selrow" id="selMixRow">
+		<span class="lbl">Mix</span>
+		<input type="color" class="mix" value="#ff1e1e" /><input type="color" class="mix" value="#2ecc5a" /><input type="color" class="mix" value="#2f7dff" />
+		<button onclick="hc.mixApply()" title="Deal these colors out across the selected lights">Apply</button>
+		<button onclick="hc.mixSave()" title="Keep this mix as a palette chip">Save chip</button>
+	</div>
 	<div class="palette">
 		<wo:repetition list="$presets" item="$currentPreset">
-			<wo:container elementName="span" class="chip" draggable="true" style="$currentPresetStyle" title="$currentPreset.name" data-value="$currentPresetData" onclick="hc.applyPreset(this)" ondragstart="hc.chipDrag(event, this)"></wo:container>
+			<span class="chipwrap">
+				<wo:container elementName="span" class="$currentPresetClass" draggable="true" style="$currentPresetStyle" title="$currentPreset.name" data-value="$currentPresetData" onclick="hc.applyPreset(this)" ondragstart="hc.chipDrag(event, this)"></wo:container>
+				<wo:if condition="$currentPresetCustom"><wo:container elementName="button" class="chipdel" title="Remove this chip" onclick="$currentPresetDeleteJS">&#10005;</wo:container></wo:if>
+			</span>
 		</wo:repetition>
 	</div>
 </div>

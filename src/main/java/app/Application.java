@@ -36,6 +36,8 @@ public class Application extends ERXApplication {
 		RouteTable.defaultRouteTable().map( "/api/room-color/*", this::roomColor );
 		RouteTable.defaultRouteTable().map( "/api/room-level/*", this::roomLevel );
 		RouteTable.defaultRouteTable().map( "/api/batch", this::batch );
+		RouteTable.defaultRouteTable().map( "/api/palette/add", this::paletteAdd );
+		RouteTable.defaultRouteTable().map( "/api/palette/remove", this::paletteRemove );
 		RouteTable.defaultRouteTable().map( "/api/effect/*", this::effect );
 		RouteTable.defaultRouteTable().map( "/api/cycle/*", this::toggleCycle );
 	}
@@ -243,6 +245,36 @@ public class Application extends ERXApplication {
 		}
 
 		Hub.applyBatch( batch );
+		return ok();
+	}
+
+	record PaletteRequest( String name, java.util.List<String> hexes ) {}
+
+	/**
+	 * POST /api/palette/add with {"name": "...", "hexes": ["#..", ...]} — saves a user chip
+	 */
+	private WOActionResults paletteAdd( RouteInvocation invocation ) {
+		final PaletteRequest request = new com.google.gson.Gson().fromJson( invocation.request().contentString(), PaletteRequest.class );
+
+		if( request == null || request.name() == null || request.name().isBlank() || request.hexes() == null || request.hexes().isEmpty() ) {
+			return badRequest( "Expected {name, hexes[]}" );
+		}
+
+		home.Palette.add( request.name().trim(), request.hexes() );
+		return ok();
+	}
+
+	/**
+	 * POST /api/palette/remove with {"name": "..."}
+	 */
+	private WOActionResults paletteRemove( RouteInvocation invocation ) {
+		final PaletteRequest request = new com.google.gson.Gson().fromJson( invocation.request().contentString(), PaletteRequest.class );
+
+		if( request == null || request.name() == null ) {
+			return badRequest( "Expected {name}" );
+		}
+
+		home.Palette.remove( request.name() );
 		return ok();
 	}
 

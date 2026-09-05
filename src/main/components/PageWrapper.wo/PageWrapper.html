@@ -65,6 +65,10 @@
 			.palette { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 			.chip { width: 30px; height: 30px; border-radius: 50%; cursor: grab; border: 2px solid rgba(255,255,255,0.15); box-shadow: 0 1px 3px rgba(0,0,0,0.5); }
 			.chip:hover { transform: scale(1.12); border-color: #fff; }
+			.chipwrap { position: relative; display: inline-block; }
+			.chipdel { position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; padding: 0; font-size: 9px; line-height: 16px; border-radius: 50%; background: #4a2028; color: #fff; display: none; }
+			.chipwrap:hover .chipdel { display: block; }
+			.selrow input[type=color].mix { width: 34px; height: 30px; }
 
 			.error { background: #4a2028; border-radius: 8px; padding: 10px 14px; }
 			.hubnote { color: #8a93a1; font-size: 0.85em; margin: 8px 0 0; }
@@ -190,6 +194,7 @@
 					// Color-only bulbs get whites translated to hue/saturation server-side, so warmth applies to them too
 					document.getElementById( 'selTempRow' ).style.display = ( any( 'temp' ) || any( 'color' ) ) ? 'flex' : 'none';
 					document.getElementById( 'selColorRow' ).style.display = any( 'color' ) ? 'flex' : 'none';
+					document.getElementById( 'selMixRow' ).style.display = any( 'color' ) ? 'flex' : 'none';
 					document.getElementById( 'selCycle' ).style.display = room && room.dataset.cyclable === 'true' ? '' : 'none';
 					document.getElementById( 'selRename' ).style.display = room && room.dataset.renamable === 'true' ? '' : 'none';
 					// Seed the sliders/swatch from the first selected light's state
@@ -223,6 +228,7 @@
 				// ---- Palette chips: tap to apply to the selection, drag onto a light or room ----
 				valueToAttrs: function( value ) {
 					if( !value ) { return null; }
+					if( value.indexOf( 'M:' ) === 0 ) { return { multi: value.substring( 2 ).split( ',' ) }; }
 					if( value.indexOf( 'K:' ) === 0 ) { return { colorTemperature: parseInt( value.substring( 2 ), 10 ) }; }
 					var m = value.match( /#[0-9a-fA-F]{6}/ );
 					if( !m ) { return null; }
@@ -231,9 +237,32 @@
 				},
 				applyPreset: function( chip ) {
 					if( !hc.sel.size ) { return; }
-					var attrs = hc.valueToAttrs( chip.dataset.value );
-					if( attrs ) { hc.batch( attrs ).then( hc.reloadSoon ); }
+					hc.applyAttrs( hc.valueToAttrs( chip.dataset.value ), Array.from( hc.sel ), false );
 				},
+				// Applies a chip's attributes to lights: single colors as one batch, multi-color sets dealt out
+				// in order — light 1, 2, 3... get colors 1, 2, 3..., wrapping around
+				applyAttrs: function( attrs, ids, turnOn ) {
+					if( !attrs || !ids.length ) { return; }
+					var base = turnOn ? { isOn: true } : {};
+					if( attrs.multi ) {
+						var groups = attrs.multi.map( function() { return []; } );
+						ids.forEach( function( id, i ) { groups[i % attrs.multi.length].push( id ); } );
+						Promise.all( groups.map( function( group, i ) {
+							if( !group.length ) { return null; }
+							var hs = hc.hexToHueSat( attrs.multi[i] );
+							return hc.batch( Object.assign( {}, base, { colorHue: hs.hue, colorSaturation: parseFloat( hs.sat ) } ), group );
+						} ) ).then( hc.reloadSoon );
+						return;
+					}
+					hc.batch( Object.assign( {}, base, attrs ), ids ).then( hc.reloadSoon );
+				},
+				mixColors: function() { return Array.from( document.querySelectorAll( '#selMixRow input.mix' ) ).map( function( i ) { return i.value; } ); },
+				mixApply: function() { hc.applyAttrs( { multi: hc.mixColors() }, Array.from( hc.sel ), false ); },
+				mixSave: function() {
+					var name = prompt( 'Name for this mix:' );
+					if( name && name.trim() ) { hc.post( '/api/palette/add', { name: name.trim(), hexes: hc.mixColors() } ).then( hc.reloadSoon ); }
+				},
+				deletePreset: function( name ) { hc.post( '/api/palette/remove', { name: name } ).then( hc.reloadSoon ); },
 				chipDrag: function( ev, chip ) {
 					ev.dataTransfer.setData( 'text/plain', chip.dataset.value );
 					ev.dataTransfer.effectAllowed = 'copy';
@@ -252,14 +281,14 @@
 					ev.preventDefault(); ev.stopPropagation();
 					el.classList.remove( 'droptarget' );
 					var attrs = hc.valueToAttrs( hc.dropValue( ev ) );
-					if( attrs ) { hc.batch( Object.assign( { isOn: true }, attrs ), [ el.dataset.id ] ).then( hc.reloadSoon ); }
+					hc.applyAttrs( attrs, [ el.dataset.id ], true );
 				},
 				dropOnRoom: function( ev, room ) {
 					ev.preventDefault();
 					room.classList.remove( 'droptarget' );
 					var attrs = hc.valueToAttrs( hc.dropValue( ev ) );
 					var ids = hc.roomLights( room.dataset.room ).map( function( el ) { return el.dataset.id; } );
-					if( attrs && ids.length ) { hc.batch( Object.assign( { isOn: true }, attrs ), ids ).then( hc.reloadSoon ); }
+					hc.applyAttrs( attrs, ids, true );
 				},
 
 				// ---- Lightning & thunder ----
