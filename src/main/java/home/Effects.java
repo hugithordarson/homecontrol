@@ -51,6 +51,17 @@ public class Effects {
 	}
 
 	/**
+	 * A strike across an arbitrary selection of lights
+	 */
+	public static void lightningDevices( final List<String> deviceIds ) {
+		runOrQueue( "lightning", () -> strike( Hub.lightsSnapshot( 3000 )
+				.stream()
+				.filter( Device::reachable )
+				.filter( light -> deviceIds.contains( light.id() ) )
+				.toList() ) );
+	}
+
+	/**
 	 * A single-bulb strobe in the spirit of the old Shelly/TRADFRI-CoAP effect.
 	 */
 	public static void lightningBolt( final String deviceId ) {

@@ -290,6 +290,55 @@ public class Hub {
 		}
 	}
 
+	/**
+	 * One request from the selection panel: a set of lights and the attributes to
+	 * apply to all of them. Each attribute goes only to lights that support it, and
+	 * every light is handled concurrently — with the hub's attribute pairing rules
+	 * respected (isOn and lightLevel apart, hue and saturation together).
+	 */
+	public record Batch( List<String> lights, Boolean isOn, Integer lightLevel, Integer colorTemperature, Double colorHue, Double colorSaturation ) {}
+
+	public static void applyBatch( final Batch batch ) {
+		final Map<String, Device> byId = new java.util.HashMap<>();
+
+		for( final Device light : lightsSnapshot( 3000 ) ) {
+			byId.put( light.id(), light );
+		}
+
+		try( final var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor() ) {
+			for( final String id : batch.lights() ) {
+				final Device light = byId.get( id );
+
+				if( light == null ) {
+					continue;
+				}
+
+				executor.submit( () -> {
+					try {
+						if( batch.isOn() != null ) {
+							setAttributes( id, Map.of( "isOn", batch.isOn() ) );
+						}
+
+						if( batch.lightLevel() != null && light.dimmable() ) {
+							setAttributes( id, Map.of( "lightLevel", clamp( batch.lightLevel(), 1, 100 ) ) );
+						}
+
+						if( batch.colorTemperature() != null && light.supportsColorTemperature() ) {
+							setAttributes( id, Map.of( "colorTemperature", clamp( batch.colorTemperature(), light.warmestTemperature(), light.coldestTemperature() ) ) );
+						}
+
+						if( batch.colorHue() != null && batch.colorSaturation() != null && light.supportsColor() ) {
+							setAttributes( id, Map.of( "colorHue", clamp( batch.colorHue(), 0, 360 ), "colorSaturation", clamp( batch.colorSaturation(), 0, 1 ) ) );
+						}
+					}
+					catch( final Exception e ) {
+						logger.warn( "Batch update of {} failed: {}", light.name(), e.toString() );
+					}
+				} );
+			}
+		}
+	}
+
 	public static void setTemperature( final String deviceId, final int kelvin ) {
 		setAttributes( deviceId, Map.of( "colorTemperature", kelvin ) );
 	}

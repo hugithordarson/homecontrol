@@ -35,6 +35,7 @@ public class Application extends ERXApplication {
 		RouteTable.defaultRouteTable().map( "/api/rename-room/*", this::renameRoom );
 		RouteTable.defaultRouteTable().map( "/api/room-color/*", this::roomColor );
 		RouteTable.defaultRouteTable().map( "/api/room-level/*", this::roomLevel );
+		RouteTable.defaultRouteTable().map( "/api/batch", this::batch );
 		RouteTable.defaultRouteTable().map( "/api/effect/*", this::effect );
 		RouteTable.defaultRouteTable().map( "/api/cycle/*", this::toggleCycle );
 	}
@@ -203,9 +204,13 @@ public class Application extends ERXApplication {
 		}
 
 		final String deviceId = invocation.request().stringFormValueForKey( "device" );
+		final String devices = invocation.request().stringFormValueForKey( "devices" );
 
 		if( deviceId != null ) {
 			home.Effects.lightningBolt( deviceId );
+		}
+		else if( devices != null && !devices.isBlank() ) {
+			home.Effects.lightningDevices( java.util.Arrays.asList( devices.split( "," ) ) );
 		}
 		else {
 			home.Effects.lightning( invocation.request().stringFormValueForKey( "room" ) );
@@ -224,6 +229,21 @@ public class Application extends ERXApplication {
 		response.setHeader( "application/json", "content-type" );
 		response.setContent( "{\"ok\":true,\"cycling\":%s}".formatted( cycling ) );
 		return response;
+	}
+
+	/**
+	 * POST /api/batch with a JSON body: {"lights":[ids], "isOn":bool, "lightLevel":n, "colorTemperature":k, "colorHue":h, "colorSaturation":s}
+	 * — any attribute may be omitted; the selection panel's one-request-for-everything.
+	 */
+	private WOActionResults batch( RouteInvocation invocation ) {
+		final Hub.Batch batch = new com.google.gson.Gson().fromJson( invocation.request().contentString(), Hub.Batch.class );
+
+		if( batch == null || batch.lights() == null || batch.lights().isEmpty() ) {
+			return badRequest( "Expected a JSON body with a non-empty lights array" );
+		}
+
+		Hub.applyBatch( batch );
+		return ok();
 	}
 
 	private static String[] pathComponents( final RouteInvocation invocation, final String prefix ) {

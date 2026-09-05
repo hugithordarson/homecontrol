@@ -1,7 +1,9 @@
 package home.components;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import com.google.gson.Gson;
 import com.webobjects.appserver.WOContext;
 
 import app.HomeComponent;
@@ -11,21 +13,30 @@ import home.Scenes;
 import home.dirigera.Device;
 
 /**
- * The dashboard: every light in the home grouped by room, with group switches
- * and scene buttons on top. All controls go through the /api/ routes via the
- * little hc javascript object in PageWrapper.
+ * The dashboard: every light grouped by room, as a selection surface. Tapping a
+ * light (or a room name, for all its lights) selects it; the panel at the bottom
+ * controls the whole selection through one /api/batch request. Palette chips can
+ * be tapped (apply to selection) or dragged onto any light or room.
  */
 
 public class FrontPage extends HomeComponent {
 
+	private static final Gson gson = new Gson();
+
+	public record Preset( String name, String hex, Integer kelvin ) {}
+
+	record Palette( List<Preset> presets ) {}
+
 	public Hub.RoomGroup currentRoom;
 	public Device currentLight;
 	public Scene currentScene;
+	public Preset currentPreset;
 	public String currentWarning;
 
 	private List<Hub.RoomGroup> _rooms;
 	private String _hubError;
 	private boolean _loaded;
+	private List<Preset> _presets;
 
 	public FrontPage( WOContext context ) {
 		super( context );
@@ -64,10 +75,6 @@ public class FrontPage extends HomeComponent {
 		return configured() && hubError() != null;
 	}
 
-	/**
-	 * @return Per-hub fetch failures — e.g. the office hub being unreachable from home.
-	 * The dashboard still renders whatever the reachable hubs returned.
-	 */
 	public List<String> fetchWarnings() {
 		rooms();
 		return Hub.fetchErrors();
@@ -81,6 +88,8 @@ public class FrontPage extends HomeComponent {
 		return Hub.hubs().size() > 1;
 	}
 
+	// Scenes
+
 	public List<Scene> scenes() {
 		return Scenes.all();
 	}
@@ -89,125 +98,10 @@ public class FrontPage extends HomeComponent {
 		return !scenes().isEmpty();
 	}
 
-	public int currentLightLevel() {
-		final Integer level = currentLight.attributes() != null ? currentLight.attributes().lightLevel() : null;
-		return level != null ? level : 100;
-	}
-
-	public String currentLightClass() {
-		final StringBuilder sb = new StringBuilder( "light" );
-
-		if( currentLight.on() ) {
-			sb.append( " on" );
-		}
-
-		if( !currentLight.reachable() ) {
-			sb.append( " unreachable" );
-		}
-
-		return sb.toString();
-	}
-
-	public String currentLightToggleJS() {
-		return "hc.toggle('%s')".formatted( currentLight.id() );
-	}
-
-	public String currentLightLevelJS() {
-		return "hc.level('%s', this.value)".formatted( currentLight.id() );
-	}
-
-	/**
-	 * @return The bulb's current color as a hex value for the color input, rendered
-	 * at full brightness (actual brightness is the lightLevel slider's business)
-	 */
-	public String currentLightColorHex() {
-		final Device.Attributes attributes = currentLight.attributes();
-		final double hue = attributes != null && attributes.colorHue() != null ? attributes.colorHue() : 0;
-		final double saturation = attributes != null && attributes.colorSaturation() != null ? attributes.colorSaturation() : 0;
-		final int rgb = java.awt.Color.HSBtoRGB( (float)(hue / 360d), (float)saturation, 1f );
-		return "#%06x".formatted( rgb & 0xffffff );
-	}
-
-	public String currentLightColorJS() {
-		return "hc.color('%s', this.value)".formatted( currentLight.id() );
-	}
-
-	/**
-	 * White-spectrum bulbs get a temperature slider; color bulbs keep their swatch
-	 */
-	public boolean currentLightHasTemperatureSlider() {
-		return currentLight.supportsColorTemperature() && !currentLight.supportsColor();
-	}
-
-	public int currentLightTemperature() {
-		final Integer kelvin = currentLight.attributes() != null ? currentLight.attributes().colorTemperature() : null;
-		return kelvin != null ? kelvin : 2700;
-	}
-
-	public int currentLightWarmest() {
-		return currentLight.warmestTemperature();
-	}
-
-	public int currentLightColdest() {
-		return currentLight.coldestTemperature();
-	}
-
-	public String currentLightTemperatureJS() {
-		return "hc.temp('%s', this.value)".formatted( currentLight.id() );
-	}
-
-	public String currentLightBoltJS() {
-		return "hc.strike('/api/effect/lightning?device=%s')".formatted( currentLight.id() );
-	}
-
-	/**
-	 * @return true for real hub rooms — the synthetic "No room" group can't be renamed
-	 */
-	public boolean currentRoomRenamable() {
-		return !"none".equals( currentRoom.id() );
-	}
-
-	public String currentRoomRenameJS() {
-		final String escapedName = currentRoom.name().replace( "\\", "\\\\" ).replace( "'", "\\'" );
-		return "hc.renameRoom('%s', '%s')".formatted( currentRoom.id(), escapedName );
-	}
-
-	/**
-	 * @return true when the room can host the color carousel — two or more color bulbs
-	 */
-	public boolean currentRoomCyclable() {
-		return currentRoom.lights().stream().filter( Device::supportsColor ).count() >= 2;
-	}
-
-	public String currentRoomCycleJS() {
-		return "hc.cycle('%s')".formatted( currentRoom.id() );
-	}
-
-	public String currentRoomCycleClass() {
-		return home.Effects.cycling( currentRoom.id() ) ? "roomcycle active" : "roomcycle";
-	}
-
-	public String currentRoomBoltJS() {
-		return "hc.strike('/api/effect/lightning?room=%s')".formatted( currentRoom.id() );
-	}
-
-	public String currentRoomOnJS() {
-		return "hc.room('%s', 'on')".formatted( currentRoom.id() );
-	}
-
-	public String currentRoomOffJS() {
-		return "hc.room('%s', 'off')".formatted( currentRoom.id() );
-	}
-
 	public String currentSceneApplyJS() {
 		return "hc.scene('%s')".formatted( currentScene.slug() );
 	}
 
-	/**
-	 * @return true when every hub this scene's lights live on is currently unreachable —
-	 * i.e. the scene belongs to the other location. Scenes from before hub-stamping
-	 * (hubs == null) are never marked away.
-	 */
 	public boolean currentSceneAway() {
 		final List<String> hubs = currentScene.hubs();
 
@@ -224,5 +118,145 @@ public class FrontPage extends HomeComponent {
 
 	public String currentSceneTitle() {
 		return currentSceneAway() ? "This scene's lights are at the other location" : "";
+	}
+
+	// Rooms
+
+	public String currentRoomOnJS() {
+		return "hc.room('%s', 'on')".formatted( currentRoom.id() );
+	}
+
+	public String currentRoomOffJS() {
+		return "hc.room('%s', 'off')".formatted( currentRoom.id() );
+	}
+
+	public String currentRoomRenamable() {
+		return "none".equals( currentRoom.id() ) ? "false" : "true";
+	}
+
+	public String currentRoomCyclable() {
+		return currentRoom.lights().stream().filter( Device::supportsColor ).count() >= 2 ? "true" : "false";
+	}
+
+	// Lights
+
+	public int currentLightLevel() {
+		final Integer level = currentLight.attributes() != null ? currentLight.attributes().lightLevel() : null;
+		return level != null ? level : 100;
+	}
+
+	public int currentLightTemperature() {
+		final Integer kelvin = currentLight.attributes() != null ? currentLight.attributes().colorTemperature() : null;
+		return kelvin != null ? kelvin : 2700;
+	}
+
+	public int currentLightWarmest() {
+		return currentLight.warmestTemperature();
+	}
+
+	public int currentLightColdest() {
+		return currentLight.coldestTemperature();
+	}
+
+	public String currentLightClass() {
+		final StringBuilder sb = new StringBuilder( "light" );
+
+		if( currentLight.on() ) {
+			sb.append( " on" );
+		}
+
+		if( !currentLight.reachable() ) {
+			sb.append( " unreachable" );
+		}
+
+		return sb.toString();
+	}
+
+	/**
+	 * @return The bulb's color as hex at full brightness (color bulbs), for the swatch and the bulb icon
+	 */
+	public String currentLightColorHex() {
+		final Device.Attributes attributes = currentLight.attributes();
+		final double hue = attributes != null && attributes.colorHue() != null ? attributes.colorHue() : 0;
+		final double saturation = attributes != null && attributes.colorSaturation() != null ? Math.clamp( attributes.colorSaturation(), 0d, 1d ) : 0;
+		final int rgb = java.awt.Color.HSBtoRGB( (float)(hue / 360d), (float)saturation, 1f );
+		return "#%06x".formatted( rgb & 0xffffff );
+	}
+
+	/**
+	 * @return The bulb icon tinted with the bulb's actual color when it's lit in color mode
+	 */
+	public String currentLightBulbStyle() {
+		return currentLight.on() && currentLight.inColorMode() ? "color: " + currentLightColorHex() : "";
+	}
+
+	public String currentLightToggleJS() {
+		return "event.stopPropagation(); hc.toggle('%s')".formatted( currentLight.id() );
+	}
+
+	/**
+	 * @return A one-line state summary: brightness plus color or temperature
+	 */
+	public String currentLightMeta() {
+		if( !currentLight.reachable() ) {
+			return "unreachable";
+		}
+
+		if( !currentLight.on() ) {
+			return "off";
+		}
+
+		final StringBuilder sb = new StringBuilder();
+
+		if( currentLight.dimmable() ) {
+			sb.append( currentLightLevel() ).append( '%' );
+		}
+
+		if( currentLight.inColorMode() ) {
+			sb.append( " · color" );
+		}
+		else if( currentLight.supportsColorTemperature() ) {
+			sb.append( " · " ).append( currentLightTemperature() ).append( " K" );
+		}
+
+		return sb.toString();
+	}
+
+	// Palette
+
+	public List<Preset> presets() {
+		if( _presets == null ) {
+			final byte[] bytes = application().resourceManager().bytesForResourceNamed( "palette.json", null, null );
+			_presets = gson.fromJson( new String( bytes, StandardCharsets.UTF_8 ), Palette.class ).presets();
+		}
+
+		return _presets;
+	}
+
+	public String currentPresetStyle() {
+		return "background: " + ( currentPreset.hex() != null ? currentPreset.hex() : kelvinHex( currentPreset.kelvin() ) );
+	}
+
+	/**
+	 * @return What the chip carries: a hex color, or "K:2700" for a white temperature
+	 */
+	public String currentPresetData() {
+		return currentPreset.hex() != null ? currentPreset.hex() : "K:" + currentPreset.kelvin();
+	}
+
+	private static String kelvinHex( final int kelvin ) {
+		if( kelvin <= 2300 ) {
+			return "#ff9d45";
+		}
+
+		if( kelvin <= 2800 ) {
+			return "#ffc27a";
+		}
+
+		if( kelvin <= 3400 ) {
+			return "#ffd9ad";
+		}
+
+		return "#fdf3e0";
 	}
 }

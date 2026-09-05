@@ -19,7 +19,7 @@
 		<div class="toolbar">
 			<button class="big" onclick="hc.all('on')">All on</button>
 			<button class="big off" onclick="hc.all('off')">All off</button>
-			<button class="bolt" title="Lightning strike" onclick="hc.strike('/api/effect/lightning')">&#9889;</button>
+			<button class="bolt" title="Lightning strike, whole house" onclick="hc.strike('/api/effect/lightning')">&#9889;</button>
 			<button id="thunderToggle" onclick="hc.toggleThunder()">&#128263; Thunder off</button>
 			<wo:if condition="$hasScenes">
 				<span class="scenes">
@@ -30,40 +30,49 @@
 			</wo:if>
 		</div>
 
+		<p class="hint">Tap a light, or a room name for the whole room, to select. The panel controls the selection. Drag a palette chip onto any light or room.</p>
+
 		<div class="rooms">
 			<wo:repetition list="$rooms" item="$currentRoom">
-				<section class="room">
+				<wo:container elementName="section" class="room" data-room="$currentRoom.id" data-name="$currentRoom.name" data-renamable="$currentRoomRenamable" data-cyclable="$currentRoomCyclable" ondragover="hc.dragOver(event)" ondrop="hc.dropOnRoom(event, this)">
 					<header>
-						<h2><wo:str value="$currentRoom.name" /><wo:if condition="$multipleHubs"><span class="hubtag"><wo:str value="$currentRoom.hubName" /></span></wo:if><wo:if condition="$currentRoomRenamable"><wo:container elementName="button" class="rename" title="Rename room" onclick="$currentRoomRenameJS">&#9998;</wo:container></wo:if></h2>
+						<h2 class="roomname" onclick="hc.selectRoom(this.closest('.room'))"><wo:str value="$currentRoom.name" /><wo:if condition="$multipleHubs"><span class="hubtag"><wo:str value="$currentRoom.hubName" /></span></wo:if></h2>
 						<span class="roombuttons">
 							<wo:container elementName="button" onclick="$currentRoomOnJS">On</wo:container>
 							<wo:container elementName="button" onclick="$currentRoomOffJS">Off</wo:container>
-							<wo:container elementName="button" class="roombolt" title="Lightning in this room only" onclick="$currentRoomBoltJS">&#9889;</wo:container>
-							<wo:if condition="$currentRoomCyclable">
-								<wo:container elementName="button" class="$currentRoomCycleClass" title="Cycle colors between the bulbs" onclick="$currentRoomCycleJS">&#8635;</wo:container>
-							</wo:if>
 						</span>
 					</header>
 					<wo:repetition list="$currentRoom.lights" item="$currentLight">
-						<wo:container elementName="div" class="$currentLightClass">
-							<wo:container elementName="button" class="bulb" onclick="$currentLightToggleJS">&#9679;</wo:container>
+						<wo:container elementName="div" class="$currentLightClass" data-id="$currentLight.id" data-dimmable="$currentLight.dimmable" data-color="$currentLight.supportsColor" data-temp="$currentLight.supportsColorTemperature" data-warm="$currentLightWarmest" data-cold="$currentLightColdest" data-level="$currentLightLevel" data-kelvin="$currentLightTemperature" data-hex="$currentLightColorHex" onclick="hc.toggleSelect(this)" ondragover="hc.dragOver(event)" ondrop="hc.dropOnLight(event, this)">
+							<wo:container elementName="button" class="bulb" style="$currentLightBulbStyle" onclick="$currentLightToggleJS" title="Toggle">&#9679;</wo:container>
 							<span class="lightname"><wo:str value="$currentLight.name" /></span>
-							<wo:if condition="$currentLight.dimmable">
-								<wo:container elementName="input" type="range" min="1" max="100" value="$currentLightLevel" oninput="$currentLightLevelJS" />
-							</wo:if>
-							<wo:if condition="$currentLight.supportsColor">
-								<wo:container elementName="input" type="color" class="swatch" value="$currentLightColorHex" oninput="$currentLightColorJS" />
-							</wo:if>
-							<wo:if condition="$currentLightHasTemperatureSlider">
-								<wo:container elementName="input" type="range" class="temp" title="Color temperature" min="$currentLightWarmest" max="$currentLightColdest" step="50" value="$currentLightTemperature" oninput="$currentLightTemperatureJS" />
-							</wo:if>
-							<wo:if condition="$currentLight.dimmable">
-								<wo:container elementName="button" class="lightbolt" title="Strobe this bulb" onclick="$currentLightBoltJS">&#9889;</wo:container>
-							</wo:if>
+							<span class="lightmeta"><wo:str value="$currentLightMeta" /></span>
 						</wo:container>
 					</wo:repetition>
-				</section>
+				</wo:container>
 			</wo:repetition>
+		</div>
+
+		<div id="selpanel" class="selpanel" hidden>
+			<div class="selhead">
+				<strong id="selCount"></strong>
+				<span class="selactions">
+					<button onclick="hc.selOn()">On</button>
+					<button onclick="hc.selOff()">Off</button>
+					<button class="bolt" onclick="hc.selStrike()" title="Strike the selection">&#9889;</button>
+					<button id="selCycle" class="roomcycle" onclick="hc.selCycle()" title="Cycle colors between this room's bulbs">&#8635;</button>
+					<button id="selRename" onclick="hc.selRename()" title="Rename room">&#9998;</button>
+					<button onclick="hc.clearSelection()" title="Clear selection">&#10005;</button>
+				</span>
+			</div>
+			<div class="selrow" id="selLevelRow"><span class="lbl">Brightness</span><input type="range" min="1" max="100" oninput="hc.selLevel(this.value)" /></div>
+			<div class="selrow" id="selTempRow"><span class="lbl">Warmth</span><input type="range" class="temp" min="2202" max="4000" step="50" oninput="hc.selTemp(this.value)" /></div>
+			<div class="selrow" id="selColorRow"><span class="lbl">Color</span><input type="color" oninput="hc.selColor(this.value)" /></div>
+			<div class="palette">
+				<wo:repetition list="$presets" item="$currentPreset">
+					<wo:container elementName="span" class="chip" draggable="true" style="$currentPresetStyle" title="$currentPreset.name" data-value="$currentPresetData" onclick="hc.applyPreset(this)" ondragstart="hc.chipDrag(event, this)"></wo:container>
+				</wo:repetition>
+			</div>
 		</div>
 	</wo:if>
 </wo:PageWrapper>
