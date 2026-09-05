@@ -323,8 +323,15 @@ public class Hub {
 							setAttributes( id, Map.of( "lightLevel", clamp( batch.lightLevel(), 1, 100 ) ) );
 						}
 
-						if( batch.colorTemperature() != null && light.supportsColorTemperature() ) {
-							setAttributes( id, Map.of( "colorTemperature", clamp( batch.colorTemperature(), light.warmestTemperature(), light.coldestTemperature() ) ) );
+						if( batch.colorTemperature() != null ) {
+							if( light.supportsColorTemperature() ) {
+								setAttributes( id, Map.of( "colorTemperature", clamp( batch.colorTemperature(), light.warmestTemperature(), light.coldestTemperature() ) ) );
+							}
+							else if( light.supportsColor() ) {
+								// No temperature dialect on this bulb — say the same thing in hue/saturation
+								final double[] hs = home.dirigera.ColorMath.kelvinToHueSat( batch.colorTemperature() );
+								setAttributes( id, Map.of( "colorHue", hs[0], "colorSaturation", hs[1] ) );
+							}
 						}
 
 						if( batch.colorHue() != null && batch.colorSaturation() != null && light.supportsColor() ) {

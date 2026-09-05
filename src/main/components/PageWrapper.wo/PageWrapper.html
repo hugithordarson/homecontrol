@@ -176,7 +176,8 @@
 					                                                          : els.length + ( els.length === 1 ? ' light selected' : ' lights selected' );
 					var any = function( key ) { return els.some( function( el ) { return el.dataset[key] === 'true'; } ); };
 					document.getElementById( 'selLevelRow' ).style.display = any( 'dimmable' ) ? 'flex' : 'none';
-					document.getElementById( 'selTempRow' ).style.display = any( 'temp' ) ? 'flex' : 'none';
+					// Color-only bulbs get whites translated to hue/saturation server-side, so warmth applies to them too
+					document.getElementById( 'selTempRow' ).style.display = ( any( 'temp' ) || any( 'color' ) ) ? 'flex' : 'none';
 					document.getElementById( 'selColorRow' ).style.display = any( 'color' ) ? 'flex' : 'none';
 					document.getElementById( 'selCycle' ).style.display = room && room.dataset.cyclable === 'true' ? '' : 'none';
 					document.getElementById( 'selRename' ).style.display = room && room.dataset.renamable === 'true' ? '' : 'none';

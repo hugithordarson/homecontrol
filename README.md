@@ -50,6 +50,11 @@ than one.
   KAJPLATS E14 CWS globe (fw 1.2.0, no update available) FADES, just faster than
   the LED1924G9. So the TRADFRI CWS globe is the only color bulb verified to
   snap, and it's the outgoing line — stock up before KAJPLATS fully replaces it.
+- Capabilities differ per bulb generation: the 2017 TRADFRI color bulbs (CWS opal
+  600lm) have NO colorTemperature capability — canReceive lists only hue and
+  saturation, so a Kelvin patch is silently skipped. Hub.applyBatch translates a
+  requested temperature into the equivalent blackbody hue/saturation for such
+  bulbs (ColorMath.kelvinToHueSat), so white presets work on them too.
 - Rooms are renamed with PUT `/v1/rooms/{id}` (PATCH 404s).
 - The hub reports attribute values it refuses to accept back: bulbs report
   colorSaturation slightly above 1.0 (e.g. 1.0022), but writing anything above
