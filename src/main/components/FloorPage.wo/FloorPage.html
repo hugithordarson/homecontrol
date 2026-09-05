@@ -1,75 +1,48 @@
 <wo:PageWrapper title="Floor plan" width="1240px">
 	<style>
-		.floorwrap { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
-		.floorwrap svg { flex: 1 1 640px; max-width: 900px; background: #0e1013; border-radius: 12px; }
+		.floorwrap svg { width: 100%; max-width: 980px; display: block; margin: 0 auto; background: #0e1013; border-radius: 12px; }
 		.region { stroke: #454d59; stroke-width: 60; cursor: default; }
 		.region.mapped { cursor: pointer; }
 		.region.mapped:hover { stroke: #9fb3c8; }
-		.region.selected { stroke: #ffc66d; stroke-width: 100; }
+		.region.selected { stroke: #ffc66d; stroke-width: 110; }
+		.region.droptarget { stroke: #ffc66d; stroke-width: 140; }
 		.roomlabel { fill: #8a93a1; font-size: 380px; font-family: system-ui, sans-serif; pointer-events: none; }
 		.region.on + .roomlabel { fill: #e6e6e6; }
-		#floorpanel { flex: 0 0 250px; background: #20242c; border-radius: 12px; padding: 16px; display: none; }
-		#floorpanel h2 { margin: 0 0 12px; font-size: 1.1em; }
-		#floorpanel .row { display: flex; gap: 8px; margin: 10px 0; align-items: center; }
-		#floorpanel input[type=range] { width: 100%; accent-color: #ffc66d; }
-		#floorpanel input[type=color] { width: 44px; height: 34px; border: none; background: none; padding: 0; cursor: pointer; }
-		.fplights { margin-top: 12px; border-top: 1px solid #39414e; padding-top: 6px; }
-		.fplights .light { cursor: default; }
+		.floorrooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
+		.floorrooms .room[hidden] { display: none; }
 	</style>
 
 	<div class="floorwrap">
 		<svg viewBox="0 0 15200 12600" xmlns="http://www.w3.org/2000/svg">
 			<rect x="300" y="300" width="12800" height="10450" fill="none" stroke="#5a6472" stroke-width="200" />
 			<wo:repetition list="$regions" item="$currentRegion">
-				<wo:container elementName="polygon" points="$currentPoints" class="$currentCss" fill="$currentFill" data-room="$currentRoomId" data-name="$currentRegion.name" data-hascolor="$currentHasColor" onclick="floorPick(this)" />
+				<wo:container elementName="polygon" points="$currentPoints" class="$currentCss" fill="$currentFill" data-room="$currentRoomId" data-name="$currentRegion.name" onclick="hc.selectRoom(this)" ondragover="hc.dragOver(event)" ondrop="hc.dropOnRoom(event, this)" />
 				<wo:container elementName="text" x="$currentLabelX" y="$currentLabelY" class="roomlabel" style="$currentLabelStyle" text-anchor="middle"><wo:str value="$currentRegion.name" /></wo:container>
 			</wo:repetition>
 		</svg>
-
-		<div id="floorpanel">
-			<h2 id="fpName"></h2>
-			<div class="row">
-				<button onclick="hc.room(hc.floorSel, 'on')">On</button>
-				<button onclick="hc.room(hc.floorSel, 'off')">Off</button>
-				<button class="roombolt" onclick="hc.strike('/api/effect/lightning?room=' + hc.floorSel)">&#9889;</button>
-				<button class="roomcycle" onclick="hc.cycle(hc.floorSel)">&#8635;</button>
-			</div>
-			<div class="row">
-				<input type="range" min="1" max="100" value="60" oninput="hc.roomLevel(hc.floorSel, this.value)" title="Brightness" />
-			</div>
-			<div class="row" id="fpColorRow">
-				<input type="color" value="#ffc66d" oninput="hc.roomColor(hc.floorSel, this.value)" title="Room color" />
-				<span class="hint">Room color</span>
-			</div>
-			<wo:repetition list="$regions" item="$currentRegion">
-				<wo:container elementName="div" class="fplights" data-room="$currentRoomId" hidden="hidden">
-					<wo:repetition list="$currentRegionLights" item="$currentLight">
-						<wo:container elementName="div" class="$currentLightRowClass">
-							<wo:container elementName="button" class="bulb" style="$currentLightBulbStyle" onclick="$currentLightToggleJS" title="Toggle">&#9679;</wo:container>
-							<span class="lightname"><wo:str value="$currentLight.name" /></span>
-							<span class="lightmeta"><wo:str value="$currentLightMeta" /></span>
-						</wo:container>
-					</wo:repetition>
-				</wo:container>
-			</wo:repetition>
-		</div>
 	</div>
 
-	<p class="hint">Regions show live light state — click a room to control it. Mappings live in floorplan.json.</p>
+	<p class="hint">Regions show live light state. Tap a room to select its lights (tap again to deselect); the panel controls the selection. Drag a palette chip onto any room. Selected rooms list their lights below — tap a light to drop it from the selection.</p>
+
+	<div class="floorrooms">
+		<wo:repetition list="$regions" item="$currentRegion">
+			<wo:container elementName="section" class="room fplights" data-room="$currentRoomId" data-name="$currentRegion.name" data-cyclable="$currentRoomCyclable" data-renamable="$currentRoomRenamable" hidden="hidden" ondragover="hc.dragOver(event)" ondrop="hc.dropOnRoom(event, this)">
+				<header><h2 class="roomname" onclick="hc.selectRoom(this.closest('.room'))"><wo:str value="$currentRegion.name" /></h2></header>
+				<wo:repetition list="$currentRegionLights" item="$currentLight">
+					<wo:container elementName="div" class="$currentLightRowClass" data-id="$currentLight.id" data-dimmable="$currentLight.dimmable" data-color="$currentLight.supportsColor" data-temp="$currentLight.supportsColorTemperature" data-warm="$currentLightWarmest" data-cold="$currentLightColdest" data-level="$currentLightLevel" data-kelvin="$currentLightTemperature" data-hex="$currentLightColorHex" onclick="hc.toggleSelect(this)" ondragover="hc.dragOver(event)" ondrop="hc.dropOnLight(event, this)">
+						<wo:container elementName="button" class="bulb" style="$currentLightBulbStyle" onclick="$currentLightToggleJS" title="Toggle">&#9679;</wo:container>
+						<span class="lightname"><wo:str value="$currentLight.name" /></span>
+						<span class="lightmeta"><wo:str value="$currentLightMeta" /></span>
+					</wo:container>
+				</wo:repetition>
+			</wo:container>
+		</wo:repetition>
+	</div>
+
+	<wo:SelectionPanel />
 
 	<script>
-		function floorPick( el ) {
-			if( !el.dataset.room ) { return; }
-			hc.floorSel = el.dataset.room;
-			document.querySelectorAll( '.region.selected' ).forEach( function( r ) { r.classList.remove( 'selected' ); } );
-			el.classList.add( 'selected' );
-			document.getElementById( 'fpName' ).textContent = el.dataset.name;
-			document.getElementById( 'fpColorRow' ).style.display = el.dataset.hascolor === 'true' ? 'flex' : 'none';
-			document.querySelectorAll( '.fplights' ).forEach( function( l ) { l.hidden = l.dataset.room !== el.dataset.room; } );
-			document.getElementById( 'floorpanel' ).style.display = 'block';
-		}
-
-		// Keep the state display fresh-ish until we grow a live feed
+		// Keep the state display fresh-ish until we grow a live feed (the selection survives the reload)
 		setTimeout( function() { if( !document.hidden ) { location.reload(); } }, 15000 );
 	</script>
 </wo:PageWrapper>

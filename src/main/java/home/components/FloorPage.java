@@ -89,8 +89,9 @@ public class FloorPage extends HomeComponent {
 	}
 
 	/**
-	 * @return The region's fill: dark when off/unmapped, the actual bulb color when
-	 * a color bulb is lit, a warm glow for lit white-spectrum rooms
+	 * @return The region's fill: dark when off/unmapped, otherwise the color the room's
+	 * lit bulbs are actually showing — real hue for color mode, the blackbody color of
+	 * the Kelvin value for white mode — dimmed with the bulb's brightness
 	 */
 	public String currentFill() {
 		final Hub.RoomGroup group = currentGroup();
@@ -104,16 +105,30 @@ public class FloorPage extends HomeComponent {
 		}
 
 		for( final Device light : group.lights() ) {
-			if( light.on() && light.inColorMode() && light.attributes().colorHue() != null && light.attributes().colorSaturation() != null ) {
-				final int rgb = java.awt.Color.HSBtoRGB(
-						(float)(light.attributes().colorHue() / 360d),
-						(float)Math.clamp( light.attributes().colorSaturation(), 0d, 1d ),
-						0.75f );
-				return "#%06x".formatted( rgb & 0xffffff );
+			if( !light.on() || light.attributes() == null ) {
+				continue;
+			}
+
+			final Device.Attributes a = light.attributes();
+			final Integer level = a.lightLevel();
+			final float brightness = 0.45f + 0.4f * ( level != null ? level : 100 ) / 100f;
+
+			if( light.inColorMode() && a.colorHue() != null && a.colorSaturation() != null ) {
+				return hex( a.colorHue(), Math.clamp( a.colorSaturation(), 0d, 1d ), brightness );
+			}
+
+			if( a.colorTemperature() != null ) {
+				final double[] hs = home.dirigera.ColorMath.kelvinToHueSat( a.colorTemperature() );
+				return hex( hs[0], hs[1], brightness );
 			}
 		}
 
 		return "#6b5327";
+	}
+
+	private static String hex( final double hue, final double saturation, final float brightness ) {
+		final int rgb = java.awt.Color.HSBtoRGB( (float)(hue / 360d), (float)saturation, brightness );
+		return "#%06x".formatted( rgb & 0xffffff );
 	}
 
 	public String currentLabelX() {
@@ -161,7 +176,7 @@ public class FloorPage extends HomeComponent {
 	}
 
 	public String currentLightToggleJS() {
-		return "hc.toggle('%s')".formatted( currentLight.id() );
+		return "event.stopPropagation(); hc.toggle('%s')".formatted( currentLight.id() );
 	}
 
 	public String currentLightMeta() {
@@ -188,6 +203,42 @@ public class FloorPage extends HomeComponent {
 		}
 
 		return sb.toString();
+	}
+
+	public String currentRoomCyclable() {
+		final Hub.RoomGroup group = currentGroup();
+		return group != null && group.lights().stream().filter( Device::supportsColor ).count() >= 2 ? "true" : "false";
+	}
+
+	public String currentRoomRenamable() {
+		final Hub.RoomGroup group = currentGroup();
+		return group != null && !"none".equals( group.id() ) ? "true" : "false";
+	}
+
+	public int currentLightLevel() {
+		final Integer level = currentLight.attributes() != null ? currentLight.attributes().lightLevel() : null;
+		return level != null ? level : 100;
+	}
+
+	public int currentLightTemperature() {
+		final Integer kelvin = currentLight.attributes() != null ? currentLight.attributes().colorTemperature() : null;
+		return kelvin != null ? kelvin : 2700;
+	}
+
+	public int currentLightWarmest() {
+		return currentLight.warmestTemperature();
+	}
+
+	public int currentLightColdest() {
+		return currentLight.coldestTemperature();
+	}
+
+	public String currentLightColorHex() {
+		final Device.Attributes attributes = currentLight.attributes();
+		final double hue = attributes != null && attributes.colorHue() != null ? attributes.colorHue() : 0;
+		final double saturation = attributes != null && attributes.colorSaturation() != null ? Math.clamp( attributes.colorSaturation(), 0d, 1d ) : 0;
+		final int rgb = java.awt.Color.HSBtoRGB( (float)(hue / 360d), (float)saturation, 1f );
+		return "#%06x".formatted( rgb & 0xffffff );
 	}
 
 	public String currentHasColor() {

@@ -55,26 +55,6 @@
 			</wo:repetition>
 		</div>
 
-		<div id="selpanel" class="selpanel" hidden>
-			<div class="selhead">
-				<strong id="selCount"></strong>
-				<span class="selactions">
-					<button onclick="hc.selOn()">On</button>
-					<button onclick="hc.selOff()">Off</button>
-					<button class="bolt" onclick="hc.selStrike()" title="Strike the selection">&#9889;</button>
-					<button id="selCycle" class="roomcycle" onclick="hc.selCycle()" title="Cycle colors between this room's bulbs">&#8635;</button>
-					<button id="selRename" onclick="hc.selRename()" title="Rename room">&#9998;</button>
-					<button onclick="hc.clearSelection()" title="Clear selection">&#10005;</button>
-				</span>
-			</div>
-			<div class="selrow" id="selLevelRow"><span class="lbl">Brightness</span><input type="range" min="1" max="100" oninput="hc.selLevel(this.value)" /></div>
-			<div class="selrow" id="selTempRow"><span class="lbl">Warmth</span><input type="range" class="temp" min="2202" max="4000" step="50" oninput="hc.selTemp(this.value)" /></div>
-			<div class="selrow" id="selColorRow"><span class="lbl">Color</span><input type="color" oninput="hc.selColor(this.value)" /></div>
-			<div class="palette">
-				<wo:repetition list="$presets" item="$currentPreset">
-					<wo:container elementName="span" class="chip" draggable="true" style="$currentPresetStyle" title="$currentPreset.name" data-value="$currentPresetData" onclick="hc.applyPreset(this)" ondragstart="hc.chipDrag(event, this)"></wo:container>
-				</wo:repetition>
-			</div>
-		</div>
+		<wo:SelectionPanel />
 	</wo:if>
 </wo:PageWrapper>

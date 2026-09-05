@@ -135,9 +135,12 @@
 					else { hc.sel.add( id ); el.classList.add( 'selected' ); }
 					hc.saveSelection(); hc.updatePanel();
 				},
+				// A "room" is anything carrying data-room: a dashboard card, a floor-plan polygon, a floor room card
+				roomLights: function( roomId ) { return roomId ? Array.from( document.querySelectorAll( '[data-room="' + roomId + '"] .light' ) ) : []; },
 				selectRoom: function( room ) {
-					var lights = room.querySelectorAll( '.light' );
-					var all = Array.from( lights ).every( function( el ) { return hc.sel.has( el.dataset.id ); } );
+					var lights = hc.roomLights( room.dataset.room );
+					if( !lights.length ) { return; }
+					var all = lights.every( function( el ) { return hc.sel.has( el.dataset.id ); } );
 					lights.forEach( function( el ) {
 						if( all ) { hc.sel.delete( el.dataset.id ); el.classList.remove( 'selected' ); }
 						else { hc.sel.add( el.dataset.id ); el.classList.add( 'selected' ); }
@@ -158,9 +161,9 @@
 				selRoom: function() {
 					var els = hc.selElements();
 					if( !els.length ) { return null; }
-					var room = els[0].closest( '.room' );
+					var room = els[0].closest( '[data-room]' );
 					if( !room ) { return null; }
-					var roomLights = Array.from( room.querySelectorAll( '.light' ) );
+					var roomLights = hc.roomLights( room.dataset.room );
 					var exact = roomLights.length === els.length && roomLights.every( function( el ) { return hc.sel.has( el.dataset.id ); } );
 					return exact ? room : null;
 				},
@@ -170,6 +173,14 @@
 					var els = hc.selElements();
 					panel.hidden = els.length === 0;
 					document.body.classList.toggle( 'hasSel', els.length > 0 );
+					// Floor plan: highlight fully-selected regions, show cards for rooms with any selected light
+					document.querySelectorAll( '.region[data-room]' ).forEach( function( r ) {
+						var lights = hc.roomLights( r.dataset.room );
+						r.classList.toggle( 'selected', lights.length > 0 && lights.every( function( el ) { return hc.sel.has( el.dataset.id ); } ) );
+					} );
+					document.querySelectorAll( '.fplights' ).forEach( function( card ) {
+						card.hidden = !hc.roomLights( card.dataset.room ).some( function( el ) { return hc.sel.has( el.dataset.id ); } );
+					} );
 					if( !els.length ) { return; }
 					var room = hc.selRoom();
 					document.getElementById( 'selCount' ).textContent = room ? room.dataset.name + ' — ' + els.length + ( els.length === 1 ? ' light' : ' lights' )
@@ -230,7 +241,7 @@
 				dragOver: function( ev ) {
 					ev.preventDefault();
 					ev.dataTransfer.dropEffect = 'copy';
-					var t = ev.currentTarget; t.classList.add( 'droptarget' );
+					var t = ev.currentTarget; if( t.classList ) { t.classList.add( 'droptarget' ); }
 					clearTimeout( t._dropTimer ); t._dropTimer = setTimeout( function() { t.classList.remove( 'droptarget' ); }, 150 );
 				},
 				dropValue: function( ev ) {
@@ -247,7 +258,7 @@
 					ev.preventDefault();
 					room.classList.remove( 'droptarget' );
 					var attrs = hc.valueToAttrs( hc.dropValue( ev ) );
-					var ids = Array.from( room.querySelectorAll( '.light' ) ).map( function( el ) { return el.dataset.id; } );
+					var ids = hc.roomLights( room.dataset.room ).map( function( el ) { return el.dataset.id; } );
 					if( attrs && ids.length ) { hc.batch( Object.assign( { isOn: true }, attrs ), ids ).then( hc.reloadSoon ); }
 				},
 
