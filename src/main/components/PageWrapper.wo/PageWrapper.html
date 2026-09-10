@@ -66,6 +66,7 @@
 			.chip { display: inline-block; width: 30px; height: 30px; border-radius: 50%; cursor: grab; border: 2px solid rgba(255,255,255,0.15); box-shadow: 0 1px 3px rgba(0,0,0,0.5); }
 			.chip:hover { transform: scale(1.12); border-color: #fff; }
 			.chipwrap { position: relative; display: inline-block; line-height: 0; }
+			.chipwrap.inapplicable { display: none; }
 			.chipdel { position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; padding: 0; font-size: 9px; line-height: 16px; border-radius: 50%; background: #4a2028; color: #fff; display: none; }
 			.chipwrap:hover .chipdel { display: block; }
 			.selrow input[type=color].mix { width: 34px; height: 30px; }
@@ -195,6 +196,17 @@
 					document.getElementById( 'selTempRow' ).style.display = ( any( 'temp' ) || any( 'color' ) ) ? 'flex' : 'none';
 					document.getElementById( 'selColorRow' ).style.display = any( 'color' ) ? 'flex' : 'none';
 					document.getElementById( 'selMixRow' ).style.display = any( 'color' ) ? 'flex' : 'none';
+					// The palette is meaningless for a selection that can take neither a color nor a temperature
+					var palette = panel.querySelector( '.palette' );
+					if( palette ) {
+						palette.style.display = ( any( 'color' ) || any( 'temp' ) ) ? 'flex' : 'none';
+						// Colors need a color bulb; whites and mixes reach temperature bulbs too (Kelvin is translated server-side)
+						palette.querySelectorAll( '.chipwrap' ).forEach( function( wrap ) {
+							var value = wrap.querySelector( '.chip' ).dataset.value;
+							var colorOnly = value.indexOf( 'K:' ) !== 0;
+							wrap.classList.toggle( 'inapplicable', colorOnly && !any( 'color' ) );
+						} );
+					}
 					document.getElementById( 'selCycle' ).style.display = room && room.dataset.cyclable === 'true' ? '' : 'none';
 					document.getElementById( 'selRename' ).style.display = room && room.dataset.renamable === 'true' ? '' : 'none';
 					// Seed the sliders/swatch from the first selected light's state
