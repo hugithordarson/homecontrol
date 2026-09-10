@@ -21,6 +21,8 @@ import home.dirigera.Device;
 
 public class Scenes {
 
+	private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger( Scenes.class );
+
 	private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
 	private static List<Scene> _scenes;
@@ -96,8 +98,10 @@ public class Scenes {
 	/**
 	 * Applies a scene: each light is sent its stored state. isOn and lightLevel are
 	 * sent as separate patches — the hub is picky about combined attribute updates.
-	 * Lights whose hub is unreachable (e.g. the scene is for the other location) are
-	 * skipped rather than aborting the rest of the scene.
+	 * Lights are handled concurrently (one virtual thread each, throttled per hub by
+	 * DirigeraClient) so the apartment changes semi-simultaneously rather than
+	 * cascading light by light. Lights whose hub is unreachable (e.g. the scene is
+	 * for the other location) are skipped rather than aborting the rest of the scene.
 	 *
 	 * @return null when everything applied, otherwise a human-readable note about the skipped lights
 	 */
@@ -108,42 +112,46 @@ public class Scenes {
 			throw new IllegalArgumentException( "No scene with slug " + slug );
 		}
 
-		int skipped = 0;
+		final java.util.concurrent.atomic.AtomicInteger skipped = new java.util.concurrent.atomic.AtomicInteger();
 
-		for( final Map.Entry<String, Scene.LightState> entry : scene.states().entrySet() ) {
-			final String deviceId = entry.getKey();
-			final Scene.LightState state = entry.getValue();
-
-			try {
-				if( Boolean.FALSE.equals( state.isOn() ) ) {
-					Hub.setAttributes( deviceId, Map.of( "isOn", false ) );
-					continue;
-				}
-
-				Hub.setAttributes( deviceId, Map.of( "isOn", true ) );
-
-				if( state.lightLevel() != null ) {
-					Hub.setAttributes( deviceId, Map.of( "lightLevel", state.lightLevel() ) );
-				}
-
-				if( state.colorTemperature() != null ) {
-					Hub.setAttributes( deviceId, Map.of( "colorTemperature", state.colorTemperature() ) );
-				}
-
-				if( state.colorHue() != null && state.colorSaturation() != null ) {
-					Hub.setAttributes( deviceId, Map.of( "colorHue", state.colorHue(), "colorSaturation", state.colorSaturation() ) );
-				}
-			}
-			catch( final Exception e ) {
-				skipped++;
+		try( final var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor() ) {
+			for( final Map.Entry<String, Scene.LightState> entry : scene.states().entrySet() ) {
+				executor.submit( () -> applyToLight( entry.getKey(), entry.getValue(), skipped ) );
 			}
 		}
 
-		if( skipped == 0 ) {
+		if( skipped.get() == 0 ) {
 			return null;
 		}
 
-		return "%s of %s lights are out of reach right now (probably at the other location)".formatted( skipped, scene.states().size() );
+		return "%s of %s lights are out of reach right now (probably at the other location)".formatted( skipped.get(), scene.states().size() );
+	}
+
+	private static void applyToLight( final String deviceId, final Scene.LightState state, final java.util.concurrent.atomic.AtomicInteger skipped ) {
+		try {
+			if( Boolean.FALSE.equals( state.isOn() ) ) {
+				Hub.setAttributes( deviceId, Map.of( "isOn", false ) );
+				return;
+			}
+
+			Hub.setAttributes( deviceId, Map.of( "isOn", true ) );
+
+			if( state.lightLevel() != null ) {
+				Hub.setAttributes( deviceId, Map.of( "lightLevel", state.lightLevel() ) );
+			}
+
+			if( state.colorTemperature() != null ) {
+				Hub.setAttributes( deviceId, Map.of( "colorTemperature", state.colorTemperature() ) );
+			}
+
+			if( state.colorHue() != null && state.colorSaturation() != null ) {
+				Hub.setAttributes( deviceId, Map.of( "colorHue", state.colorHue(), "colorSaturation", state.colorSaturation() ) );
+			}
+		}
+		catch( final Exception e ) {
+			logger.warn( "Scene update of {} failed: {}", deviceId, e.toString() );
+			skipped.incrementAndGet();
+		}
 	}
 
 	private static void save() {
