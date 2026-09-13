@@ -33,6 +33,7 @@ public class Application extends ERXApplication {
 		RouteTable.defaultRouteTable().map( "/api/temperature/*", this::deviceTemperature );
 		RouteTable.defaultRouteTable().map( "/api/scene/*", this::applyScene );
 		RouteTable.defaultRouteTable().map( "/api/rename-room/*", this::renameRoom );
+		RouteTable.defaultRouteTable().map( "/api/rename-scene/*", this::renameScene );
 		RouteTable.defaultRouteTable().map( "/api/room-color/*", this::roomColor );
 		RouteTable.defaultRouteTable().map( "/api/room-level/*", this::roomLevel );
 		RouteTable.defaultRouteTable().map( "/api/batch", this::batch );
@@ -151,6 +152,29 @@ public class Application extends ERXApplication {
 		}
 
 		Hub.renameRoom( lastPathComponent( invocation ), name.trim() );
+		return ok();
+	}
+
+	/**
+	 * /api/rename-scene/[slug]?name=[new name]
+	 */
+	private WOActionResults renameScene( RouteInvocation invocation ) {
+		final String name = invocation.request().stringFormValueForKey( "name" );
+
+		if( name == null || name.isBlank() ) {
+			return badRequest( "Expected /api/rename-scene/[slug]?name=[new name]" );
+		}
+
+		try {
+			Scenes.rename( lastPathComponent( invocation ), name.trim() );
+		}
+		catch( final IllegalArgumentException e ) {
+			final WOResponse response = new WOResponse();
+			response.setStatus( 409 );
+			response.setContent( e.getMessage() );
+			return response;
+		}
+
 		return ok();
 	}
 

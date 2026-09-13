@@ -99,6 +99,15 @@
 					}
 				},
 
+				renameScene: function( slug, currentName ) {
+					var name = prompt( 'New scene name:', currentName );
+					if( name && name.trim() && name.trim() !== currentName ) {
+						hc.post( '/api/rename-scene/' + encodeURIComponent( slug ) + '?name=' + encodeURIComponent( name.trim() ) ).then( function( r ) {
+							if( r.ok ) { location.reload(); } else { r.text().then( function( t ) { alert( t ); } ); }
+						} );
+					}
+				},
+
 				// Debounced single-target setters (floor plan panel, direct API use)
 				_timers: {},
 				debounced: function( key, ms, fn ) { clearTimeout( hc._timers[key] ); hc._timers[key] = setTimeout( fn, ms ); },

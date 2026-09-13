@@ -90,6 +90,29 @@ public class Scenes {
 		return scene;
 	}
 
+	/**
+	 * Renames a scene; the slug follows the name. Refuses a name whose slug would
+	 * collide with another scene.
+	 */
+	public static void rename( final String slug, final String newName ) {
+		final Scene scene = bySlug( slug );
+
+		if( scene == null ) {
+			throw new IllegalArgumentException( "No scene with slug " + slug );
+		}
+
+		final String newSlug = slugify( newName );
+		final Scene collision = bySlug( newSlug );
+
+		if( collision != null && collision != scene ) {
+			throw new IllegalArgumentException( "There's already a scene called \"%s\"".formatted( collision.name() ) );
+		}
+
+		final List<Scene> scenes = all();
+		scenes.set( scenes.indexOf( scene ), new Scene( newName.trim(), newSlug, scene.hubs(), scene.states() ) );
+		save();
+	}
+
 	public static void delete( final String slug ) {
 		all().removeIf( scene -> scene.slug().equals( slug ) );
 		save();

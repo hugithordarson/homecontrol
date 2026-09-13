@@ -83,6 +83,11 @@ public class ScenesPage extends HomeComponent {
 		return redirectTo( "/scenes" );
 	}
 
+	public String currentSceneRenameJS() {
+		final String escaped = currentScene.name().replace( "\\", "\\\\" ).replace( "'", "\\'" );
+		return "hc.renameScene('%s', '%s'); return false".formatted( currentScene.slug(), escaped );
+	}
+
 	public WOActionResults deleteCurrentScene() {
 		Scenes.delete( currentScene.slug() );
 		return redirectTo( "/scenes" );
