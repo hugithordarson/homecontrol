@@ -67,6 +67,22 @@ public class ScenesPage extends HomeComponent {
 		return redirectTo( "/scenes" );
 	}
 
+	/**
+	 * Re-captures the current state of the lights into this scene, keeping its name —
+	 * the way to "edit" a scene: arrange the lights, then update.
+	 */
+	public WOActionResults updateCurrentScene() {
+		try {
+			Scenes.captureCurrent( currentScene.name() );
+			flashError( "\"%s\" updated from the current state of the lights".formatted( currentScene.name() ) );
+		}
+		catch( final Exception e ) {
+			flashError( e.getMessage() );
+		}
+
+		return redirectTo( "/scenes" );
+	}
+
 	public WOActionResults deleteCurrentScene() {
 		Scenes.delete( currentScene.slug() );
 		return redirectTo( "/scenes" );

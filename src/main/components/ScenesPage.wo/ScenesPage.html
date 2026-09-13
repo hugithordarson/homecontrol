@@ -12,6 +12,7 @@
 					<td><strong><wo:str value="$currentScene.name" /></strong></td>
 					<td class="dim"><wo:str value="$currentScene.lightCount" /> lights</td>
 					<td><wo:link action="$applyCurrentScene">Apply</wo:link></td>
+					<td><wo:link action="$updateCurrentScene" title="Re-capture the lights as they are now into this scene">Update</wo:link></td>
 					<td><wo:link action="$deleteCurrentScene" class="danger">Delete</wo:link></td>
 				</tr>
 			</wo:repetition>
@@ -23,7 +24,7 @@
 	</wo:if>
 
 	<h2>New scene</h2>
-	<p class="hint">Put the lights exactly how you want them on the <a href="/">Lights</a> page, then save the arrangement here:</p>
+	<p class="hint">Put the lights exactly how you want them on the <a href="/">Lights</a> page, then save the arrangement here. To edit a scene: arrange the lights, then <em>Update</em> it above (saving under an existing name does the same).</p>
 	<wo:WOForm>
 		<wo:WOTextField value="$newSceneName" placeholder="Scene name, e.g. Movie night" />
 		<wo:WOSubmitButton action="$captureScene" value="Save current state as scene" />
