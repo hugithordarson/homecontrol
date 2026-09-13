@@ -137,7 +137,16 @@ public class Application extends ERXApplication {
 	 * /api/scene/[slug]
 	 */
 	private WOActionResults applyScene( RouteInvocation invocation ) {
-		Scenes.apply( lastPathComponent( invocation ) );
+		final String slug = lastPathComponent( invocation );
+
+		if( Scenes.bySlug( slug ) == null ) {
+			final WOResponse response = new WOResponse();
+			response.setStatus( 404 );
+			response.setContent( "No scene with slug " + slug );
+			return response;
+		}
+
+		Scenes.apply( slug );
 		return ok();
 	}
 
@@ -302,6 +311,10 @@ public class Application extends ERXApplication {
 		return ok();
 	}
 
+	/**
+	 * The route URL arrives still percent-encoded — invisible for UUID ids, fatal for
+	 * scene slugs with Icelandic letters (n%C3%B3tt). Every component gets decoded.
+	 */
 	private static String[] pathComponents( final RouteInvocation invocation, final String prefix ) {
 		String path = stripQueryString( invocation.url() ).substring( prefix.length() );
 
@@ -309,7 +322,13 @@ public class Application extends ERXApplication {
 			path = path.substring( 0, path.length() - 1 );
 		}
 
-		return path.split( "/" );
+		final String[] components = path.split( "/" );
+
+		for( int i = 0; i < components.length; i++ ) {
+			components[i] = java.net.URLDecoder.decode( components[i], java.nio.charset.StandardCharsets.UTF_8 );
+		}
+
+		return components;
 	}
 
 	private static String lastPathComponent( final RouteInvocation invocation ) {
@@ -319,7 +338,7 @@ public class Application extends ERXApplication {
 			url = url.substring( 0, url.length() - 1 );
 		}
 
-		return url.substring( url.lastIndexOf( '/' ) + 1 );
+		return java.net.URLDecoder.decode( url.substring( url.lastIndexOf( '/' ) + 1 ), java.nio.charset.StandardCharsets.UTF_8 );
 	}
 
 	private static String stripQueryString( final String url ) {
