@@ -32,12 +32,13 @@
 			</wo:if>
 		</div>
 
-		<p class="hint">Tap a light, or a room name for the whole room, to select. The panel controls the selection. Drag a palette chip onto any light or room.</p>
+		<p class="hint">Tap a light, or a room name for the whole room, to select. The panel controls the selection. Drag a palette chip onto any light or room; drag a room by its &#8942;&#8942; grip to reorder.</p>
 
 		<div class="rooms">
 			<wo:repetition list="$rooms" item="$currentRoom">
 				<wo:container elementName="section" class="room" data-room="$currentRoom.id" data-name="$currentRoom.name" data-renamable="$currentRoomRenamable" data-cyclable="$currentRoomCyclable" ondragover="hc.dragOver(event)" ondrop="hc.dropOnRoom(event, this)">
 					<header>
+						<span class="grip" draggable="true" title="Drag to reorder rooms" ondragstart="hc.roomDragStart(event, this.closest('.room'))">&#8942;&#8942;</span>
 						<h2 class="roomname" onclick="hc.selectRoom(this.closest('.room'))"><wo:str value="$currentRoom.name" /><wo:if condition="$multipleHubs"><span class="hubtag"><wo:str value="$currentRoom.hubName" /></span></wo:if></h2>
 						<span class="roombuttons">
 							<wo:container elementName="button" onclick="$currentRoomOnJS">On</wo:container>

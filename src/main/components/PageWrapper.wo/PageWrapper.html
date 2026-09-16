@@ -36,7 +36,13 @@
 			@media (max-width: 700px) { .rooms { grid-template-columns: 1fr; } }
 			.room { background: #20242c; border-radius: 12px; padding: 6px 14px 12px; transition: box-shadow 0.15s; }
 			.room.droptarget { box-shadow: 0 0 0 2px #ffc66d inset; }
-			.room header { display: flex; justify-content: space-between; align-items: center; }
+			.room header { display: flex; align-items: center; gap: 8px; }
+			.room header h2 { flex: 1; }
+			.room .grip { color: #4a5260; cursor: grab; font-size: 1.1em; letter-spacing: -3px; user-select: none; -webkit-user-select: none; padding: 4px 2px; }
+			.room .grip:hover { color: #9fb3c8; }
+			.room.dragging { opacity: 0.4; }
+			.room.insert-before { box-shadow: 0 -3px 0 0 #ffc66d; }
+			.room.insert-after { box-shadow: 0 3px 0 0 #ffc66d; }
 			.room h2 { font-size: 1.05em; margin: 10px 0; cursor: pointer; user-select: none; -webkit-user-select: none; }
 			.room h2:hover { color: #ffc66d; }
 			.room .hubtag { color: #8a93a1; font-size: 0.7em; font-weight: normal; margin-left: 8px; background: #2b313b; border-radius: 5px; padding: 2px 7px; vertical-align: middle; }
@@ -290,8 +296,21 @@
 				},
 				dragOver: function( ev ) {
 					ev.preventDefault();
+					var t = ev.currentTarget;
+					if( hc._dragRoom ) {
+						// Reordering: show where the card would land instead of the paint highlight
+						ev.dataTransfer.dropEffect = 'move';
+						var room = t.classList && t.classList.contains( 'room' ) ? t : null;
+						if( room && room !== hc._dragRoom ) {
+							var rect = room.getBoundingClientRect();
+							var after = ev.clientY > rect.top + rect.height / 2;
+							room.classList.toggle( 'insert-before', !after ); room.classList.toggle( 'insert-after', after );
+							clearTimeout( room._insTimer ); room._insTimer = setTimeout( function() { room.classList.remove( 'insert-before', 'insert-after' ); }, 150 );
+						}
+						return;
+					}
 					ev.dataTransfer.dropEffect = 'copy';
-					var t = ev.currentTarget; if( t.classList ) { t.classList.add( 'droptarget' ); }
+					if( t.classList ) { t.classList.add( 'droptarget' ); }
 					clearTimeout( t._dropTimer ); t._dropTimer = setTimeout( function() { t.classList.remove( 'droptarget' ); }, 150 );
 				},
 				dropValue: function( ev ) {
@@ -301,12 +320,34 @@
 				dropOnLight: function( ev, el ) {
 					ev.preventDefault(); ev.stopPropagation();
 					el.classList.remove( 'droptarget' );
+					// A room card dropped onto a light row lands on that light's room
+					if( hc._dragRoom ) { hc.roomDropReorder( ev, el.closest( '.room' ) ); return; }
 					var attrs = hc.valueToAttrs( hc.dropValue( ev ) );
 					hc.applyAttrs( attrs, [ el.dataset.id ], true );
+				},
+				// ---- Room reordering: drag a card by its grip; the order is saved for everyone ----
+				_dragRoom: null,
+				roomDragStart: function( ev, room ) {
+					hc._dragRoom = room;
+					room.classList.add( 'dragging' );
+					ev.dataTransfer.setData( 'text/plain', 'room:' + room.dataset.room );
+					ev.dataTransfer.effectAllowed = 'move';
+				},
+				roomDropReorder: function( ev, target ) {
+					var dragged = hc._dragRoom;
+					hc._dragRoom = null;
+					document.querySelectorAll( '.room.dragging, .room.insert-before, .room.insert-after' ).forEach( function( r ) { r.classList.remove( 'dragging', 'insert-before', 'insert-after' ); } );
+					if( !dragged || dragged === target ) { return; }
+					var rect = target.getBoundingClientRect();
+					var after = ev.clientY > rect.top + rect.height / 2;
+					target.parentNode.insertBefore( dragged, after ? target.nextSibling : target );
+					var order = Array.from( document.querySelectorAll( '.rooms .room' ) ).map( function( r ) { return r.dataset.room; } );
+					hc.post( '/api/room-order', { rooms: order } );
 				},
 				dropOnRoom: function( ev, room ) {
 					ev.preventDefault();
 					room.classList.remove( 'droptarget' );
+					if( hc._dragRoom || ( hc.dropValue( ev ) || '' ).indexOf( 'room:' ) === 0 ) { hc.roomDropReorder( ev, room ); return; }
 					var attrs = hc.valueToAttrs( hc.dropValue( ev ) );
 					var ids = hc.roomLights( room.dataset.room ).map( function( el ) { return el.dataset.id; } );
 					hc.applyAttrs( attrs, ids, true );

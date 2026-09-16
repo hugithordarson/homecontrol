@@ -187,7 +187,8 @@ public class Hub {
 	}
 
 	/**
-	 * @return The lights grouped by room, in room name order
+	 * @return The lights grouped by room — in the user's saved order (see roomOrder),
+	 * with rooms not yet ordered following alphabetically
 	 */
 	public static List<RoomGroup> roomGroups() {
 		final Map<String, RoomGroup> groups = new LinkedHashMap<>();
@@ -198,7 +199,49 @@ public class Hub {
 					.add( light );
 		}
 
-		return List.copyOf( groups.values() );
+		final List<String> order = roomOrder();
+		final List<RoomGroup> sorted = new ArrayList<>( groups.values() );
+		sorted.sort( Comparator.comparingInt( ( RoomGroup g ) -> order.contains( g.id() ) ? order.indexOf( g.id() ) : Integer.MAX_VALUE ).thenComparing( RoomGroup::name ) );
+		return List.copyOf( sorted );
+	}
+
+	/** The user's room ordering for the dashboard, persisted in ~/.homecontrol/room-order.json */
+	private static List<String> _roomOrder;
+
+	private record RoomOrderFile( List<String> rooms ) {}
+
+	public static List<String> roomOrder() {
+		if( _roomOrder == null ) {
+			_roomOrder = new ArrayList<>();
+			final Path file = configDirectory().resolve( "room-order.json" );
+
+			if( Files.exists( file ) ) {
+				try {
+					final RoomOrderFile parsed = gson.fromJson( Files.readString( file ), RoomOrderFile.class );
+
+					if( parsed != null && parsed.rooms() != null ) {
+						_roomOrder.addAll( parsed.rooms() );
+					}
+				}
+				catch( final IOException e ) {
+					throw new UncheckedIOException( "Could not read " + file, e );
+				}
+			}
+		}
+
+		return _roomOrder;
+	}
+
+	public static void saveRoomOrder( final List<String> roomIds ) {
+		try {
+			Files.createDirectories( configDirectory() );
+			Files.writeString( configDirectory().resolve( "room-order.json" ), gson.toJson( new RoomOrderFile( roomIds ) ) );
+		}
+		catch( final IOException e ) {
+			throw new UncheckedIOException( "Could not write room-order.json", e );
+		}
+
+		_roomOrder = null;
 	}
 
 	/**

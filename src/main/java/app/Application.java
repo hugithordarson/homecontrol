@@ -37,6 +37,7 @@ public class Application extends ERXApplication {
 		RouteTable.defaultRouteTable().map( "/api/room-color/*", this::roomColor );
 		RouteTable.defaultRouteTable().map( "/api/room-level/*", this::roomLevel );
 		RouteTable.defaultRouteTable().map( "/api/batch", this::batch );
+		RouteTable.defaultRouteTable().map( "/api/room-order", this::roomOrder );
 		RouteTable.defaultRouteTable().map( "/api/palette/add", this::paletteAdd );
 		RouteTable.defaultRouteTable().map( "/api/palette/remove", this::paletteRemove );
 		RouteTable.defaultRouteTable().map( "/api/effect/*", this::effect );
@@ -278,6 +279,22 @@ public class Application extends ERXApplication {
 		}
 
 		Hub.applyBatch( batch );
+		return ok();
+	}
+
+	record RoomOrderRequest( java.util.List<String> rooms ) {}
+
+	/**
+	 * POST /api/room-order with {"rooms":[roomIds in display order]} — the dashboard's card order
+	 */
+	private WOActionResults roomOrder( RouteInvocation invocation ) {
+		final RoomOrderRequest request = new com.google.gson.Gson().fromJson( invocation.request().contentString(), RoomOrderRequest.class );
+
+		if( request == null || request.rooms() == null ) {
+			return badRequest( "Expected {rooms: [ids]}" );
+		}
+
+		Hub.saveRoomOrder( request.rooms() );
 		return ok();
 	}
 
