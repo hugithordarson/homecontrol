@@ -130,40 +130,50 @@ public class DirigeraClient {
 		}
 	}
 
-	private String sendOnce( final HttpRequest request, final int[] acceptedStatuses, final boolean retryOnConnectFailure ) {
-		try {
-			final HttpResponse<String> response = _http.send( request, BodyHandlers.ofString() );
+	/** Attempts per request: the hub answers a burst with transient 404 "Something went wrong" errors and dropped connections */
+	private static final int ATTEMPTS = 3;
 
-			for( final int status : acceptedStatuses ) {
-				if( response.statusCode() == status ) {
-					return response.body();
+	private String sendOnce( final HttpRequest request, final int[] acceptedStatuses, final boolean unused ) {
+		DirigeraException last = null;
+
+		for( int attempt = 1; attempt <= ATTEMPTS; attempt++ ) {
+			try {
+				final HttpResponse<String> response = _http.send( request, BodyHandlers.ofString() );
+
+				for( final int status : acceptedStatuses ) {
+					if( response.statusCode() == status ) {
+						return response.body();
+					}
+				}
+
+				last = new DirigeraException( "Hub returned %s: %s".formatted( response.statusCode(), response.body() ) );
+
+				// A 404 carrying "Something went wrong" is the hub buckling under load, not a missing device
+				if( !( response.statusCode() == 404 && response.body() != null && response.body().contains( "Something went wrong" ) ) ) {
+					throw last;
 				}
 			}
+			catch( final IOException e ) {
+				// Connect timeouts, dropped keep-alive connections, resets: all transient under a burst
+				last = new DirigeraException( "Could not reach the hub at " + _hubAddress + ": " + e.getMessage(), e );
+			}
+			catch( final InterruptedException e ) {
+				Thread.currentThread().interrupt();
+				throw new DirigeraException( "Interrupted while talking to the hub", e );
+			}
 
-			throw new DirigeraException( "Hub returned %s: %s".formatted( response.statusCode(), response.body() ) );
-		}
-		catch( final java.net.http.HttpConnectTimeoutException | java.net.ConnectException e ) {
-			// A momentarily overloaded hub gets one more chance before a light is given up on
-			if( retryOnConnectFailure ) {
+			if( attempt < ATTEMPTS ) {
 				try {
-					Thread.sleep( 250 );
+					Thread.sleep( 250L * attempt );
 				}
 				catch( final InterruptedException ie ) {
 					Thread.currentThread().interrupt();
+					throw last;
 				}
-
-				return sendOnce( request, acceptedStatuses, false );
 			}
+		}
 
-			throw new DirigeraException( "Could not reach the hub at " + _hubAddress + ": " + e.getMessage(), e );
-		}
-		catch( final IOException e ) {
-			throw new DirigeraException( "Could not reach the hub at " + _hubAddress + ": " + e.getMessage(), e );
-		}
-		catch( final InterruptedException e ) {
-			Thread.currentThread().interrupt();
-			throw new DirigeraException( "Interrupted while talking to the hub", e );
-		}
+		throw last;
 	}
 
 	static String baseURL( final String hubAddress ) {

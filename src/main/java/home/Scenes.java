@@ -135,47 +135,80 @@ public class Scenes {
 			throw new IllegalArgumentException( "No scene with slug " + slug );
 		}
 
-		final java.util.concurrent.atomic.AtomicInteger skipped = new java.util.concurrent.atomic.AtomicInteger();
+		final java.util.concurrent.atomic.AtomicInteger unreachable = new java.util.concurrent.atomic.AtomicInteger();
+		final java.util.concurrent.atomic.AtomicInteger failed = new java.util.concurrent.atomic.AtomicInteger();
 
 		try( final var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor() ) {
 			for( final Map.Entry<String, Scene.LightState> entry : scene.states().entrySet() ) {
-				executor.submit( () -> applyToLight( entry.getKey(), entry.getValue(), skipped ) );
+				executor.submit( () -> applyToLight( entry.getKey(), entry.getValue(), unreachable, failed ) );
 			}
 		}
 
-		if( skipped.get() == 0 ) {
+		if( unreachable.get() == 0 && failed.get() == 0 ) {
 			return null;
 		}
 
-		return "%s of %s lights are out of reach right now (probably at the other location)".formatted( skipped.get(), scene.states().size() );
+		final StringBuilder note = new StringBuilder();
+
+		if( unreachable.get() > 0 ) {
+			note.append( "%s of %s lights are at a hub that's out of reach right now".formatted( unreachable.get(), scene.states().size() ) );
+		}
+
+		if( failed.get() > 0 ) {
+			if( note.length() > 0 ) {
+				note.append( "; " );
+			}
+
+			note.append( "%s of %s lights didn't take the update (the hub didn't respond — try again)".formatted( failed.get(), scene.states().size() ) );
+		}
+
+		return note.toString();
 	}
 
-	private static void applyToLight( final String deviceId, final Scene.LightState state, final java.util.concurrent.atomic.AtomicInteger skipped ) {
+	private static void applyToLight( final String deviceId, final Scene.LightState state, final java.util.concurrent.atomic.AtomicInteger unreachable, final java.util.concurrent.atomic.AtomicInteger failed ) {
+		final String hub = Hub.hubAddressForDevice( deviceId );
+
+		if( hub == null || Hub.hubDown( hub ) ) {
+			unreachable.incrementAndGet();
+			return;
+		}
+
 		try {
 			if( Boolean.FALSE.equals( state.isOn() ) ) {
 				Hub.setAttributes( deviceId, Map.of( "isOn", false ) );
 				return;
 			}
 
+			// Successive patches to the same bulb get a little air between them —
+			// the hub answers back-to-back updates to one device with transient errors
 			Hub.setAttributes( deviceId, Map.of( "isOn", true ) );
 
 			if( state.lightLevel() != null ) {
+				Thread.sleep( PATCH_SPACING_MS );
 				Hub.setAttributes( deviceId, Map.of( "lightLevel", state.lightLevel() ) );
 			}
 
 			if( state.colorTemperature() != null ) {
+				Thread.sleep( PATCH_SPACING_MS );
 				Hub.setAttributes( deviceId, Map.of( "colorTemperature", state.colorTemperature() ) );
 			}
 
 			if( state.colorHue() != null && state.colorSaturation() != null ) {
+				Thread.sleep( PATCH_SPACING_MS );
 				Hub.setAttributes( deviceId, Map.of( "colorHue", state.colorHue(), "colorSaturation", state.colorSaturation() ) );
 			}
 		}
+		catch( final InterruptedException e ) {
+			Thread.currentThread().interrupt();
+			failed.incrementAndGet();
+		}
 		catch( final Exception e ) {
 			logger.warn( "Scene update of {} failed: {}", deviceId, e.toString() );
-			skipped.incrementAndGet();
+			failed.incrementAndGet();
 		}
 	}
+
+	private static final long PATCH_SPACING_MS = 120;
 
 	private static void save() {
 		try {
