@@ -5,19 +5,35 @@
 		<p class="error"><wo:str value="$error" /></p>
 	</wo:if>
 
+	<style>
+		.scenelist { display: flex; flex-direction: column; gap: 10px; margin: 16px 0 28px; }
+		.scenerow { display: flex; align-items: center; gap: 14px; background: #20242c; border-radius: 12px; padding: 12px 16px; }
+		.scenerow .scenename { flex: 1; min-width: 0; }
+		.scenerow .scenename strong { font-size: 1.05em; }
+		.scenerow .scenename .dim { margin-left: 8px; font-size: 0.85em; }
+		.scenerow a.apply { background: #ffc66d; color: #1c1c1c; font-weight: bold; text-decoration: none; border-radius: 8px; padding: 10px 22px; }
+		.scenerow a.apply:hover { background: #ffd68f; }
+		.scenerow .more { display: flex; gap: 4px; margin-left: 18px; padding-left: 18px; border-left: 1px solid #39414e; }
+		.scenerow .more a { color: #8a93a1; text-decoration: none; font-size: 0.85em; padding: 6px 8px; border-radius: 6px; }
+		.scenerow .more a:hover { color: #e6e6e6; background: #2b313b; }
+		.scenerow .more a.danger:hover { color: #ff9a9a; background: #3a2227; }
+		@media (max-width: 600px) { .scenerow { flex-wrap: wrap; } .scenerow .more { margin-left: 0; padding-left: 0; border-left: none; width: 100%; justify-content: flex-end; } }
+	</style>
+
 	<wo:if condition="$hasScenes">
-		<table class="scenetable">
+		<div class="scenelist">
 			<wo:repetition list="$scenes" item="$currentScene">
-				<tr>
-					<td><strong><wo:str value="$currentScene.name" /></strong></td>
-					<td class="dim"><wo:str value="$currentScene.lightCount" /> lights</td>
-					<td><wo:link action="$applyCurrentScene">Apply</wo:link></td>
-					<td><wo:link action="$updateCurrentScene" title="Re-capture the lights as they are now into this scene">Update</wo:link></td>
-					<td><wo:container elementName="a" href="#" onclick="$currentSceneRenameJS">Rename</wo:container></td>
-					<td><wo:link action="$deleteCurrentScene" class="danger">Delete</wo:link></td>
-				</tr>
+				<div class="scenerow">
+					<span class="scenename"><strong><wo:str value="$currentScene.name" /></strong><span class="dim"><wo:str value="$currentScene.lightCount" /> lights</span></span>
+					<wo:link action="$applyCurrentScene" class="apply">Apply</wo:link>
+					<span class="more">
+						<wo:link action="$updateCurrentScene" title="Re-capture the lights as they are now into this scene">Update</wo:link>
+						<wo:container elementName="a" href="#" onclick="$currentSceneRenameJS">Rename</wo:container>
+						<wo:link action="$deleteCurrentScene" class="danger" title="Delete this scene">Delete</wo:link>
+					</span>
+				</div>
 			</wo:repetition>
-		</table>
+		</div>
 	</wo:if>
 
 	<wo:if condition="$hasNoScenes">
