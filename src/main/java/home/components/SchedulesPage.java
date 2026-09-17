@@ -29,8 +29,8 @@ public class SchedulesPage extends HomeComponent {
 	public Hub.RoomGroup currentRoom;
 	public Scene currentScene;
 
-	// The form
-	public String name;
+	// The form ("name" would collide with WOComponent.name())
+	public String scheduleName;
 	public String trigger = "sunset";
 	public Scene selectedScene;
 	public String durationMinutes = "10";
@@ -108,7 +108,7 @@ public class SchedulesPage extends HomeComponent {
 
 	public WOActionResults addSchedule() {
 		try {
-			if( name == null || name.isBlank() ) {
+			if( scheduleName == null || scheduleName.isBlank() ) {
 				throw new IllegalArgumentException( "Give the schedule a name" );
 			}
 
@@ -125,7 +125,7 @@ public class SchedulesPage extends HomeComponent {
 			// "All rooms" is the empty list; a full set of rooms means the same thing
 			final List<String> rooms = selectedRooms.size() == rooms().size() ? List.of() : new ArrayList<>( selectedRooms );
 
-			Schedules.add( new Schedule( Schedules.newId(), name.trim(), trigger.trim(), days, selectedScene.slug(), Math.max( 0, minutes ), rooms, true ) );
+			Schedules.add( new Schedule( Schedules.newId(), scheduleName.trim(), trigger.trim(), days, selectedScene.slug(), Math.max( 0, minutes ), rooms, true ) );
 		}
 		catch( final NumberFormatException e ) {
 			flashError( "Duration must be a number of minutes" );
