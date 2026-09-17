@@ -1,0 +1,79 @@
+<wo:PageWrapper title="Schedules" width="760px">
+	<style>
+		.schedlist { display: flex; flex-direction: column; gap: 10px; margin: 16px 0 28px; }
+		.schedule { background: #20242c; border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+		.schedule.disabled { opacity: 0.5; }
+		.schedule .what { flex: 1; min-width: 240px; }
+		.schedule .what strong { font-size: 1.05em; }
+		.schedule .what .dim { display: block; margin-top: 3px; }
+		.schedule .more { display: flex; gap: 4px; }
+		.schedule .more a { color: #8a93a1; text-decoration: none; font-size: 0.85em; padding: 6px 8px; border-radius: 6px; }
+		.schedule .more a:hover { color: #e6e6e6; background: #2b313b; }
+		.schedule .more a.danger:hover { color: #ff9a9a; background: #3a2227; }
+		.schedform { background: #20242c; border-radius: 12px; padding: 16px; display: grid; grid-template-columns: 110px 1fr; gap: 12px 14px; align-items: center; }
+		.schedform label.lbl { color: #8a93a1; font-size: 0.9em; }
+		.schedform .checks { display: flex; flex-wrap: wrap; gap: 10px 16px; }
+		.schedform .checks label { display: flex; align-items: center; gap: 5px; }
+		.schedform select { font: inherit; background: #12151a; color: #e6e6e6; border: 1px solid #39414e; border-radius: 8px; padding: 8px 12px; }
+		.schedform .submit { grid-column: 2; }
+	</style>
+
+	<h1>Schedules</h1>
+	<p class="hint"><wo:str value="$sunToday" /></p>
+
+	<wo:if condition="$hasError">
+		<p class="error"><wo:str value="$error" /></p>
+	</wo:if>
+
+	<wo:if condition="$hasSchedules">
+		<div class="schedlist">
+			<wo:repetition list="$schedules" item="$currentSchedule">
+				<wo:container elementName="div" class="$currentScheduleClass">
+					<span class="what">
+						<strong><wo:str value="$currentSchedule.name" /></strong>
+						<span class="dim"><wo:str value="$currentScheduleWhen" />, <wo:str value="$currentScheduleDays" /> &rarr; <wo:str value="$currentScheduleScene" /> <wo:str value="$currentScheduleDuration" /> &middot; <wo:str value="$currentScheduleRooms" /></span>
+					</span>
+					<span class="more">
+						<wo:link action="$runCurrentSchedule" title="Run this transition now">Run now</wo:link>
+						<wo:link action="$toggleCurrentSchedule"><wo:str value="$currentScheduleToggleLabel" /></wo:link>
+						<wo:link action="$deleteCurrentSchedule" class="danger">Delete</wo:link>
+					</span>
+				</wo:container>
+			</wo:repetition>
+		</div>
+	</wo:if>
+
+	<h2>New schedule</h2>
+	<wo:WOForm>
+		<div class="schedform">
+			<label class="lbl">Name</label>
+			<wo:WOTextField value="$name" placeholder="e.g. Evening" />
+
+			<label class="lbl">When</label>
+			<span><wo:WOTextField value="$trigger" /> <span class="hint">a time like 17:30, or sunrise / sunset with an offset in minutes: sunset+30, sunrise-15</span></span>
+
+			<label class="lbl">Days</label>
+			<span class="checks">
+				<wo:repetition list="$weekdays" item="$currentDay">
+					<label><wo:WOCheckBox checked="$currentDayChecked" /><wo:str value="$currentDayLabel" /></label>
+				</wo:repetition>
+			</span>
+
+			<label class="lbl">Scene</label>
+			<wo:WOPopUpButton list="$scenes" item="$currentScene" displayString="$currentScene.name" selection="$selectedScene" noSelectionString="Pick a scene" />
+
+			<label class="lbl">Fade over</label>
+			<span><wo:WOTextField value="$durationMinutes" size="4" /> minutes <span class="hint">(0 = switch at once; the bulbs fade on their own, up to 100 minutes)</span></span>
+
+			<label class="lbl">Rooms</label>
+			<span class="checks">
+				<wo:repetition list="$rooms" item="$currentRoom">
+					<label><wo:WOCheckBox checked="$currentRoomChecked" /><wo:str value="$currentRoom.name" /></label>
+				</wo:repetition>
+				<span class="hint">none ticked = every room</span>
+			</span>
+
+			<wo:WOSubmitButton action="$addSchedule" value="Add schedule" class="submit" />
+		</div>
+	</wo:WOForm>
+</wo:PageWrapper>

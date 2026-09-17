@@ -16,12 +16,14 @@ public class Application extends ERXApplication {
 
 	public Application() {
 		setupRoutes();
+		home.Schedules.startScheduler();
 	}
 
 	private void setupRoutes() {
 		RouteTable.defaultRouteTable().map( "/", FrontPage.class );
 		RouteTable.defaultRouteTable().map( "/scenes", ScenesPage.class );
 		RouteTable.defaultRouteTable().map( "/floor", home.components.FloorPage.class );
+		RouteTable.defaultRouteTable().map( "/schedules", home.components.SchedulesPage.class );
 		RouteTable.defaultRouteTable().map( "/setup", SetupPage.class );
 
 		// The control endpoints the dashboard's javascript talks to

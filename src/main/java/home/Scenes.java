@@ -129,18 +129,51 @@ public class Scenes {
 	 * @return null when everything applied, otherwise a human-readable note about the skipped lights
 	 */
 	public static String apply( final String slug ) {
+		return transitionTo( slug, java.time.Duration.ZERO, null );
+	}
+
+	/**
+	 * The hub's per-patch transitionTime tops out around 100 minutes (Zigbee counts
+	 * tenths of a second in 16 bits); longer requests are clamped.
+	 */
+	private static final long MAX_TRANSITION_MS = 6_000_000;
+
+	/**
+	 * Fades the lights into a scene over a duration — the bulbs do the fading via
+	 * transitionTime, so it costs one command per attribute regardless of length.
+	 * A zero duration applies the scene at once.
+	 *
+	 * @param roomIds limit the transition to lights in these hub rooms (null = all)
+	 * @return null when everything applied, otherwise a human-readable note
+	 */
+	public static String transitionTo( final String slug, final java.time.Duration duration, final List<String> roomIds ) {
 		final Scene scene = bySlug( slug );
 
 		if( scene == null ) {
 			throw new IllegalArgumentException( "No scene with slug " + slug );
 		}
 
+		final int transitionMs = (int)Math.min( MAX_TRANSITION_MS, Math.max( 0, duration.toMillis() ) );
+		final Map<String, Device> devices = new java.util.HashMap<>();
+
+		for( final Device light : Hub.lightsSnapshot( 3000 ) ) {
+			devices.put( light.id(), light );
+		}
+
 		final java.util.concurrent.atomic.AtomicInteger unreachable = new java.util.concurrent.atomic.AtomicInteger();
 		final java.util.concurrent.atomic.AtomicInteger failed = new java.util.concurrent.atomic.AtomicInteger();
+		int included = 0;
 
 		try( final var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor() ) {
 			for( final Map.Entry<String, Scene.LightState> entry : scene.states().entrySet() ) {
-				executor.submit( () -> applyToLight( entry.getKey(), entry.getValue(), unreachable, failed ) );
+				final Device device = devices.get( entry.getKey() );
+
+				if( roomIds != null && ( device == null || !roomIds.contains( device.roomId() ) ) ) {
+					continue;
+				}
+
+				included++;
+				executor.submit( () -> applyToLight( entry.getKey(), device, entry.getValue(), transitionMs, unreachable, failed ) );
 			}
 		}
 
@@ -151,7 +184,7 @@ public class Scenes {
 		final StringBuilder note = new StringBuilder();
 
 		if( unreachable.get() > 0 ) {
-			note.append( "%s of %s lights are at a hub that's out of reach right now".formatted( unreachable.get(), scene.states().size() ) );
+			note.append( "%s of %s lights are at a hub that's out of reach right now".formatted( unreachable.get(), included ) );
 		}
 
 		if( failed.get() > 0 ) {
@@ -159,13 +192,13 @@ public class Scenes {
 				note.append( "; " );
 			}
 
-			note.append( "%s of %s lights didn't take the update (the hub didn't respond — try again)".formatted( failed.get(), scene.states().size() ) );
+			note.append( "%s of %s lights didn't take the update (the hub didn't respond — try again)".formatted( failed.get(), included ) );
 		}
 
 		return note.toString();
 	}
 
-	private static void applyToLight( final String deviceId, final Scene.LightState state, final java.util.concurrent.atomic.AtomicInteger unreachable, final java.util.concurrent.atomic.AtomicInteger failed ) {
+	private static void applyToLight( final String deviceId, final Device device, final Scene.LightState state, final int transitionMs, final java.util.concurrent.atomic.AtomicInteger unreachable, final java.util.concurrent.atomic.AtomicInteger failed ) {
 		final String hub = Hub.hubAddressForDevice( deviceId );
 
 		if( hub == null || Hub.hubDown( hub ) ) {
@@ -173,29 +206,55 @@ public class Scenes {
 			return;
 		}
 
+		final boolean fading = transitionMs > 0;
+		final boolean currentlyOn = device != null && device.on();
+		final Integer transition = fading ? transitionMs : null;
+
 		try {
 			if( Boolean.FALSE.equals( state.isOn() ) ) {
-				Hub.setAttributes( deviceId, Map.of( "isOn", false ) );
+				if( fading && currentlyOn && device.dimmable() ) {
+					// Fade down to minimum over the duration, then switch off invisibly —
+					// and remember the brightness owed for the next turn-on
+					Hub.setAttributes( deviceId, Map.of( "lightLevel", 1 ), transitionMs );
+					Thread.sleep( transitionMs + 500 );
+					Hub.setAttributes( deviceId, Map.of( "isOn", false ) );
+
+					if( device.attributes() != null && device.attributes().lightLevel() != null ) {
+						Hub.registerPendingLevelRestore( deviceId, device.attributes().lightLevel() );
+					}
+				}
+				else {
+					Hub.setAttributes( deviceId, Map.of( "isOn", false ) );
+				}
+
 				return;
 			}
 
 			// Successive patches to the same bulb get a little air between them —
 			// the hub answers back-to-back updates to one device with transient errors
-			Hub.setAttributes( deviceId, Map.of( "isOn", true ) );
+			if( !currentlyOn ) {
+				Hub.setAttributes( deviceId, Map.of( "isOn", true ) );
+
+				if( fading && device != null && device.dimmable() ) {
+					// Wake at minimum so the fade-in starts from darkness, not the remembered level
+					Thread.sleep( PATCH_SPACING_MS );
+					Hub.setAttributes( deviceId, Map.of( "lightLevel", 1 ), 0 );
+				}
+			}
 
 			if( state.lightLevel() != null ) {
 				Thread.sleep( PATCH_SPACING_MS );
-				Hub.setAttributes( deviceId, Map.of( "lightLevel", state.lightLevel() ) );
+				Hub.setAttributes( deviceId, Map.of( "lightLevel", state.lightLevel() ), transition );
 			}
 
 			if( state.colorTemperature() != null ) {
 				Thread.sleep( PATCH_SPACING_MS );
-				Hub.setAttributes( deviceId, Map.of( "colorTemperature", state.colorTemperature() ) );
+				Hub.setAttributes( deviceId, Map.of( "colorTemperature", state.colorTemperature() ), transition );
 			}
 
 			if( state.colorHue() != null && state.colorSaturation() != null ) {
 				Thread.sleep( PATCH_SPACING_MS );
-				Hub.setAttributes( deviceId, Map.of( "colorHue", state.colorHue(), "colorSaturation", state.colorSaturation() ) );
+				Hub.setAttributes( deviceId, Map.of( "colorHue", state.colorHue(), "colorSaturation", state.colorSaturation() ), transition );
 			}
 		}
 		catch( final InterruptedException e ) {
