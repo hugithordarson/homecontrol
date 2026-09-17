@@ -198,6 +198,17 @@ public class Scenes {
 		return note.toString();
 	}
 
+	/**
+	 * Fades up to this long are a single command with transitionTime. Longer fades
+	 * are stepped from here: some bulb generations (the 2017 CWS opal 600lm, the CWS
+	 * globe 806lm) silently ignore multi-minute transitions, while every generation
+	 * honors a short one — so the server sends an interpolated target every STEP_MS,
+	 * each with a short transition, and the whole fleet fades identically.
+	 */
+	private static final long SINGLE_COMMAND_MAX_MS = 10_000;
+	private static final long STEP_MS = 15_000;
+	private static final int STEP_TRANSITION_MS = 12_000;
+
 	private static void applyToLight( final String deviceId, final Device device, final Scene.LightState state, final int transitionMs, final java.util.concurrent.atomic.AtomicInteger unreachable, final java.util.concurrent.atomic.AtomicInteger failed ) {
 		final String hub = Hub.hubAddressForDevice( deviceId );
 
@@ -207,6 +218,7 @@ public class Scenes {
 		}
 
 		final boolean fading = transitionMs > 0;
+		final boolean stepped = transitionMs > SINGLE_COMMAND_MAX_MS && device != null && device.attributes() != null;
 		final boolean currentlyOn = device != null && device.on();
 		final Integer transition = fading ? transitionMs : null;
 
@@ -215,11 +227,17 @@ public class Scenes {
 				if( fading && currentlyOn && device.dimmable() ) {
 					// Fade down to minimum over the duration, then switch off invisibly —
 					// and remember the brightness owed for the next turn-on
-					Hub.setAttributes( deviceId, Map.of( "lightLevel", 1 ), transitionMs );
-					Thread.sleep( transitionMs + 500 );
+					if( stepped ) {
+						steppedFade( deviceId, device, new Scene.LightState( true, 1, null, null, null ), transitionMs );
+					}
+					else {
+						Hub.setAttributes( deviceId, Map.of( "lightLevel", 1 ), transitionMs );
+						Thread.sleep( transitionMs + 500 );
+					}
+
 					Hub.setAttributes( deviceId, Map.of( "isOn", false ) );
 
-					if( device.attributes() != null && device.attributes().lightLevel() != null ) {
+					if( device.attributes().lightLevel() != null ) {
 						Hub.registerPendingLevelRestore( deviceId, device.attributes().lightLevel() );
 					}
 				}
@@ -232,6 +250,8 @@ public class Scenes {
 
 			// Successive patches to the same bulb get a little air between them —
 			// the hub answers back-to-back updates to one device with transient errors
+			Device from = device;
+
 			if( !currentlyOn ) {
 				Hub.setAttributes( deviceId, Map.of( "isOn", true ) );
 
@@ -239,7 +259,13 @@ public class Scenes {
 					// Wake at minimum so the fade-in starts from darkness, not the remembered level
 					Thread.sleep( PATCH_SPACING_MS );
 					Hub.setAttributes( deviceId, Map.of( "lightLevel", 1 ), 0 );
+					from = withLevel( device, 1 );
 				}
+			}
+
+			if( stepped ) {
+				steppedFade( deviceId, from, state, transitionMs );
+				return;
 			}
 
 			if( state.lightLevel() != null ) {
@@ -265,6 +291,64 @@ public class Scenes {
 			logger.warn( "Scene update of {} failed: {}", deviceId, e.toString() );
 			failed.incrementAndGet();
 		}
+	}
+
+	/**
+	 * Walks a bulb from its current state to the target in STEP_MS increments on a
+	 * wall-clock schedule, each step a short transition the bulb finishes before the
+	 * next arrives (no snap-completed transitions, no blinks).
+	 */
+	private static void steppedFade( final String deviceId, final Device from, final Scene.LightState to, final int durationMs ) throws InterruptedException {
+		final Device.Attributes a = from.attributes();
+		final int steps = (int)Math.max( 1, Math.ceil( durationMs / (double)STEP_MS ) );
+		final long start = System.currentTimeMillis();
+
+		final Integer level0 = from.dimmable() && a.lightLevel() != null ? a.lightLevel() : null;
+		final Integer temp0 = a.colorTemperature();
+		final Double hue0 = a.colorHue();
+		final Double sat0 = a.colorSaturation() != null ? Math.clamp( a.colorSaturation(), 0d, 1d ) : null;
+
+		for( int i = 1; i <= steps; i++ ) {
+			final double f = i / (double)steps;
+			final long due = start + (long)( f * durationMs );
+			final long wait = due - System.currentTimeMillis();
+
+			if( wait > 0 ) {
+				Thread.sleep( wait );
+			}
+
+			final int transition = i == steps ? Math.min( STEP_TRANSITION_MS, (int)Math.max( 1000, durationMs / steps - 3000 ) ) : STEP_TRANSITION_MS;
+
+			if( to.lightLevel() != null && from.dimmable() ) {
+				final int level = level0 == null ? to.lightLevel() : (int)Math.round( level0 + ( to.lightLevel() - level0 ) * f );
+				Hub.setAttributes( deviceId, Map.of( "lightLevel", Math.clamp( level, 1, 100 ) ), transition );
+			}
+
+			if( to.colorTemperature() != null && from.supportsColorTemperature() ) {
+				Thread.sleep( PATCH_SPACING_MS );
+				final int kelvin = temp0 == null ? to.colorTemperature() : (int)Math.round( temp0 + ( to.colorTemperature() - temp0 ) * f );
+				Hub.setAttributes( deviceId, Map.of( "colorTemperature", kelvin ), transition );
+			}
+
+			if( to.colorHue() != null && to.colorSaturation() != null && from.supportsColor() ) {
+				Thread.sleep( PATCH_SPACING_MS );
+				final double hue = hue0 == null ? to.colorHue() : hue0 + shortestArc( hue0, to.colorHue() ) * f;
+				final double sat = sat0 == null ? to.colorSaturation() : sat0 + ( to.colorSaturation() - sat0 ) * f;
+				Hub.setAttributes( deviceId, Map.of( "colorHue", ( ( hue % 360 ) + 360 ) % 360, "colorSaturation", Math.clamp( sat, 0d, 1d ) ), transition );
+			}
+		}
+	}
+
+	private static double shortestArc( final double fromHue, final double toHue ) {
+		double delta = ( ( toHue - fromHue ) % 360 + 540 ) % 360 - 180;
+		return delta;
+	}
+
+	private static Device withLevel( final Device device, final int level ) {
+		final Device.Attributes a = device.attributes();
+		return new Device( device.id(), device.type(), device.deviceType(), device.isReachable(), device.isHidden(),
+				new Device.Attributes( a.customName(), a.model(), true, level, a.colorMode(), a.colorTemperature(), a.colorTemperatureMin(), a.colorTemperatureMax(), a.colorHue(), a.colorSaturation() ),
+				device.room(), device.capabilities() );
 	}
 
 	private static final long PATCH_SPACING_MS = 120;

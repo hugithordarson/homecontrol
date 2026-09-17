@@ -40,6 +40,7 @@ public class Application extends ERXApplication {
 		RouteTable.defaultRouteTable().map( "/api/room-level/*", this::roomLevel );
 		RouteTable.defaultRouteTable().map( "/api/batch", this::batch );
 		RouteTable.defaultRouteTable().map( "/api/room-order", this::roomOrder );
+		RouteTable.defaultRouteTable().map( "/api/schedule/run/*", this::runSchedule );
 		RouteTable.defaultRouteTable().map( "/api/palette/add", this::paletteAdd );
 		RouteTable.defaultRouteTable().map( "/api/palette/remove", this::paletteRemove );
 		RouteTable.defaultRouteTable().map( "/api/effect/*", this::effect );
@@ -281,6 +282,23 @@ public class Application extends ERXApplication {
 		}
 
 		Hub.applyBatch( batch );
+		return ok();
+	}
+
+	/**
+	 * POST /api/schedule/run/[id] — runs a schedule's transition now (in the background)
+	 */
+	private WOActionResults runSchedule( RouteInvocation invocation ) {
+		final home.Schedules.Schedule schedule = home.Schedules.byId( lastPathComponent( invocation ) );
+
+		if( schedule == null ) {
+			final WOResponse response = new WOResponse();
+			response.setStatus( 404 );
+			response.setContent( "No such schedule" );
+			return response;
+		}
+
+		Thread.ofVirtual().start( () -> home.Schedules.run( schedule ) );
 		return ok();
 	}
 
