@@ -32,7 +32,8 @@
 			.toolbar .scenes { display: flex; flex-wrap: wrap; gap: 8px; margin-left: 12px; }
 			.toolbar .scene.away { opacity: 0.4; }
 
-			.rooms { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 16px; }
+			.rooms { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px; }
+			@media (max-width: 1100px) { .rooms { grid-template-columns: repeat(2, 1fr); } }
 			@media (max-width: 700px) { .rooms { grid-template-columns: 1fr; } }
 			.room { background: #20242c; border-radius: 12px; padding: 6px 14px 12px; transition: box-shadow 0.15s; }
 			.room.droptarget { box-shadow: 0 0 0 2px #ffc66d inset; }
