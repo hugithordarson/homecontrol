@@ -254,12 +254,24 @@ public class Hub {
 		_pendingLevelRestore.put( deviceId, level );
 	}
 
+	/**
+	 * A manual command to a light — it cancels any scheduled fade running on that
+	 * light, so a person always wins over the schedule.
+	 */
 	public static void setAttributes( final String deviceId, final Map<String, Object> attributes ) {
-		clientForDevice( deviceId ).setAttributes( deviceId, attributes );
-		repairLevelIfPending( deviceId, attributes );
+		Scenes.cancelFade( deviceId );
+		setAttributesQuietly( deviceId, attributes, null );
 	}
 
 	public static void setAttributes( final String deviceId, final Map<String, Object> attributes, final Integer transitionTimeMs ) {
+		Scenes.cancelFade( deviceId );
+		setAttributesQuietly( deviceId, attributes, transitionTimeMs );
+	}
+
+	/**
+	 * The path scheduled fades use for their own steps — no cancellation side effect
+	 */
+	public static void setAttributesQuietly( final String deviceId, final Map<String, Object> attributes, final Integer transitionTimeMs ) {
 		clientForDevice( deviceId ).setAttributes( deviceId, attributes, transitionTimeMs );
 		repairLevelIfPending( deviceId, attributes );
 	}

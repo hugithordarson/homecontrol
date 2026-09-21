@@ -41,6 +41,7 @@ public class Application extends ERXApplication {
 		RouteTable.defaultRouteTable().map( "/api/batch", this::batch );
 		RouteTable.defaultRouteTable().map( "/api/room-order", this::roomOrder );
 		RouteTable.defaultRouteTable().map( "/api/schedule/run/*", this::runSchedule );
+		RouteTable.defaultRouteTable().map( "/api/schedule/cancel", this::cancelFades );
 		RouteTable.defaultRouteTable().map( "/api/palette/add", this::paletteAdd );
 		RouteTable.defaultRouteTable().map( "/api/palette/remove", this::paletteRemove );
 		RouteTable.defaultRouteTable().map( "/api/effect/*", this::effect );
@@ -300,6 +301,17 @@ public class Application extends ERXApplication {
 
 		Thread.ofVirtual().start( () -> home.Schedules.run( schedule ) );
 		return ok();
+	}
+
+	/**
+	 * POST /api/schedule/cancel — stops every running scheduled fade, lights stay where they are
+	 */
+	private WOActionResults cancelFades( RouteInvocation invocation ) {
+		final int count = Scenes.cancelAllFades();
+		final WOResponse response = new WOResponse();
+		response.setHeader( "application/json", "content-type" );
+		response.setContent( "{\"ok\":true,\"cancelled\":%s}".formatted( count ) );
+		return response;
 	}
 
 	record RoomOrderRequest( java.util.List<String> rooms ) {}

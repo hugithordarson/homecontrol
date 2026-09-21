@@ -25,6 +25,10 @@
 		<p class="error"><wo:str value="$error" /></p>
 	</wo:if>
 
+	<wo:if condition="$hasRunningFades">
+		<p class="error" style="background: #2d4a3a">A scheduled fade is running on <wo:str value="$runningFades" /> lights &mdash; <wo:link action="$cancelFades">stop it</wo:link> (any manual change to a light also stops its fade).</p>
+	</wo:if>
+
 	<wo:if condition="$hasSchedules">
 		<div class="schedlist">
 			<wo:repetition list="$schedules" item="$currentSchedule">

@@ -43,6 +43,20 @@ public class SchedulesPage extends HomeComponent {
 		super( context );
 	}
 
+	public int runningFades() {
+		return Scenes.runningFades();
+	}
+
+	public boolean hasRunningFades() {
+		return runningFades() > 0;
+	}
+
+	public WOActionResults cancelFades() {
+		final int count = Scenes.cancelAllFades();
+		flashError( "Stopped the fade on %s lights — they stay as they are now".formatted( count ) );
+		return redirectTo( "/schedules" );
+	}
+
 	public List<Schedule> schedules() {
 		return Schedules.all();
 	}

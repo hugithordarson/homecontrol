@@ -173,6 +173,7 @@ public class Scenes {
 				}
 
 				included++;
+				cancelFade( entry.getKey() );
 				executor.submit( () -> applyToLight( entry.getKey(), device, entry.getValue(), transitionMs, unreachable, failed ) );
 			}
 		}
@@ -206,8 +207,37 @@ public class Scenes {
 	 * each with a short transition, and the whole fleet fades identically.
 	 */
 	private static final long SINGLE_COMMAND_MAX_MS = 10_000;
-	private static final long STEP_MS = 15_000;
-	private static final int STEP_TRANSITION_MS = 12_000;
+
+	/**
+	 * Steps are instant snaps every STEP_MS rather than short transitions: a bulb
+	 * still finishing a transition drops the next command (the IKEA freeze bug), and
+	 * the generations that ignore long transitions stretch short ones too — so they
+	 * ended a 5-minute fade two thirds of the way. A couple of brightness levels
+	 * every ten seconds is invisible, and snaps every generation honors.
+	 */
+	private static final long STEP_MS = 10_000;
+
+	/** Running scheduled fades by light — a manual command to the light flips its flag */
+	private static final Map<String, java.util.concurrent.atomic.AtomicBoolean> _fades = new java.util.concurrent.ConcurrentHashMap<>();
+
+	public static void cancelFade( final String deviceId ) {
+		final java.util.concurrent.atomic.AtomicBoolean flag = _fades.remove( deviceId );
+
+		if( flag != null ) {
+			flag.set( true );
+			logger.info( "Fade on {} cancelled by a manual command", deviceId );
+		}
+	}
+
+	public static int cancelAllFades() {
+		final int count = _fades.size();
+		List.copyOf( _fades.keySet() ).forEach( Scenes::cancelFade );
+		return count;
+	}
+
+	public static int runningFades() {
+		return _fades.size();
+	}
 
 	private static void applyToLight( final String deviceId, final Device device, final Scene.LightState state, final int transitionMs, final java.util.concurrent.atomic.AtomicInteger unreachable, final java.util.concurrent.atomic.AtomicInteger failed ) {
 		final String hub = Hub.hubAddressForDevice( deviceId );
@@ -216,6 +246,22 @@ public class Scenes {
 			unreachable.incrementAndGet();
 			return;
 		}
+
+		final java.util.concurrent.atomic.AtomicBoolean cancelled = new java.util.concurrent.atomic.AtomicBoolean();
+
+		if( transitionMs > SINGLE_COMMAND_MAX_MS ) {
+			_fades.put( deviceId, cancelled );
+		}
+
+		try {
+			applyToLight( deviceId, device, state, transitionMs, cancelled, unreachable, failed );
+		}
+		finally {
+			_fades.remove( deviceId, cancelled );
+		}
+	}
+
+	private static void applyToLight( final String deviceId, final Device device, final Scene.LightState state, final int transitionMs, final java.util.concurrent.atomic.AtomicBoolean cancelled, final java.util.concurrent.atomic.AtomicInteger unreachable, final java.util.concurrent.atomic.AtomicInteger failed ) {
 
 		final boolean fading = transitionMs > 0;
 		final boolean stepped = transitionMs > SINGLE_COMMAND_MAX_MS && device != null && device.attributes() != null;
@@ -228,21 +274,25 @@ public class Scenes {
 					// Fade down to minimum over the duration, then switch off invisibly —
 					// and remember the brightness owed for the next turn-on
 					if( stepped ) {
-						steppedFade( deviceId, device, new Scene.LightState( true, 1, null, null, null ), transitionMs );
+						steppedFade( deviceId, device, new Scene.LightState( true, 1, null, null, null ), transitionMs, cancelled );
 					}
 					else {
-						Hub.setAttributes( deviceId, Map.of( "lightLevel", 1 ), transitionMs );
+						Hub.setAttributesQuietly( deviceId, Map.of( "lightLevel", 1 ), transitionMs );
 						Thread.sleep( transitionMs + 500 );
 					}
 
-					Hub.setAttributes( deviceId, Map.of( "isOn", false ) );
+					if( cancelled.get() ) {
+						return;
+					}
+
+					Hub.setAttributesQuietly( deviceId, Map.of( "isOn", false ), null );
 
 					if( device.attributes().lightLevel() != null ) {
 						Hub.registerPendingLevelRestore( deviceId, device.attributes().lightLevel() );
 					}
 				}
 				else {
-					Hub.setAttributes( deviceId, Map.of( "isOn", false ) );
+					Hub.setAttributesQuietly( deviceId, Map.of( "isOn", false ), null );
 				}
 
 				return;
@@ -253,34 +303,34 @@ public class Scenes {
 			Device from = device;
 
 			if( !currentlyOn ) {
-				Hub.setAttributes( deviceId, Map.of( "isOn", true ) );
+				Hub.setAttributesQuietly( deviceId, Map.of( "isOn", true ), null );
 
 				if( fading && device != null && device.dimmable() ) {
 					// Wake at minimum so the fade-in starts from darkness, not the remembered level
 					Thread.sleep( PATCH_SPACING_MS );
-					Hub.setAttributes( deviceId, Map.of( "lightLevel", 1 ), 0 );
+					Hub.setAttributesQuietly( deviceId, Map.of( "lightLevel", 1 ), 0 );
 					from = withLevel( device, 1 );
 				}
 			}
 
 			if( stepped ) {
-				steppedFade( deviceId, from, state, transitionMs );
+				steppedFade( deviceId, from, state, transitionMs, cancelled );
 				return;
 			}
 
 			if( state.lightLevel() != null ) {
 				Thread.sleep( PATCH_SPACING_MS );
-				Hub.setAttributes( deviceId, Map.of( "lightLevel", state.lightLevel() ), transition );
+				Hub.setAttributesQuietly( deviceId, Map.of( "lightLevel", state.lightLevel() ), transition );
 			}
 
 			if( state.colorTemperature() != null ) {
 				Thread.sleep( PATCH_SPACING_MS );
-				Hub.setAttributes( deviceId, Map.of( "colorTemperature", state.colorTemperature() ), transition );
+				Hub.setAttributesQuietly( deviceId, Map.of( "colorTemperature", state.colorTemperature() ), transition );
 			}
 
 			if( state.colorHue() != null && state.colorSaturation() != null ) {
 				Thread.sleep( PATCH_SPACING_MS );
-				Hub.setAttributes( deviceId, Map.of( "colorHue", state.colorHue(), "colorSaturation", state.colorSaturation() ), transition );
+				Hub.setAttributesQuietly( deviceId, Map.of( "colorHue", state.colorHue(), "colorSaturation", state.colorSaturation() ), transition );
 			}
 		}
 		catch( final InterruptedException e ) {
@@ -298,7 +348,7 @@ public class Scenes {
 	 * wall-clock schedule, each step a short transition the bulb finishes before the
 	 * next arrives (no snap-completed transitions, no blinks).
 	 */
-	private static void steppedFade( final String deviceId, final Device from, final Scene.LightState to, final int durationMs ) throws InterruptedException {
+	private static void steppedFade( final String deviceId, final Device from, final Scene.LightState to, final int durationMs, final java.util.concurrent.atomic.AtomicBoolean cancelled ) throws InterruptedException {
 		final Device.Attributes a = from.attributes();
 		final int steps = (int)Math.max( 1, Math.ceil( durationMs / (double)STEP_MS ) );
 		final long start = System.currentTimeMillis();
@@ -317,24 +367,28 @@ public class Scenes {
 				Thread.sleep( wait );
 			}
 
-			final int transition = i == steps ? Math.min( STEP_TRANSITION_MS, (int)Math.max( 1000, durationMs / steps - 3000 ) ) : STEP_TRANSITION_MS;
+			if( cancelled.get() ) {
+				return;
+			}
+
+			final Integer transition = 0;
 
 			if( to.lightLevel() != null && from.dimmable() ) {
 				final int level = level0 == null ? to.lightLevel() : (int)Math.round( level0 + ( to.lightLevel() - level0 ) * f );
-				Hub.setAttributes( deviceId, Map.of( "lightLevel", Math.clamp( level, 1, 100 ) ), transition );
+				Hub.setAttributesQuietly( deviceId, Map.of( "lightLevel", Math.clamp( level, 1, 100 ) ), transition );
 			}
 
 			if( to.colorTemperature() != null && from.supportsColorTemperature() ) {
 				Thread.sleep( PATCH_SPACING_MS );
 				final int kelvin = temp0 == null ? to.colorTemperature() : (int)Math.round( temp0 + ( to.colorTemperature() - temp0 ) * f );
-				Hub.setAttributes( deviceId, Map.of( "colorTemperature", kelvin ), transition );
+				Hub.setAttributesQuietly( deviceId, Map.of( "colorTemperature", kelvin ), transition );
 			}
 
 			if( to.colorHue() != null && to.colorSaturation() != null && from.supportsColor() ) {
 				Thread.sleep( PATCH_SPACING_MS );
 				final double hue = hue0 == null ? to.colorHue() : hue0 + shortestArc( hue0, to.colorHue() ) * f;
 				final double sat = sat0 == null ? to.colorSaturation() : sat0 + ( to.colorSaturation() - sat0 ) * f;
-				Hub.setAttributes( deviceId, Map.of( "colorHue", ( ( hue % 360 ) + 360 ) % 360, "colorSaturation", Math.clamp( sat, 0d, 1d ) ), transition );
+				Hub.setAttributesQuietly( deviceId, Map.of( "colorHue", ( ( hue % 360 ) + 360 ) % 360, "colorSaturation", Math.clamp( sat, 0d, 1d ) ), transition );
 			}
 		}
 	}
