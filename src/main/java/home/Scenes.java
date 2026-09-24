@@ -217,6 +217,16 @@ public class Scenes {
 	 */
 	private static final long STEP_MS = 10_000;
 
+	/** Stepping bounds: never faster than this (hub load), never slower than STEP_MS */
+	private static final long MIN_STEP_MS = 3_000;
+
+	/**
+	 * Each brightness step glides over this long, so the bulb eases from step to step
+	 * instead of snapping. Short enough that every generation honours it and finishes
+	 * well before the next step arrives (even the LED1924G9, which adds about a second).
+	 */
+	private static final int STEP_GLIDE_MS = 1_000;
+
 	/** Running scheduled fades by light — a manual command to the light flips its flag */
 	private static final Map<String, java.util.concurrent.atomic.AtomicBoolean> _fades = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -350,7 +360,6 @@ public class Scenes {
 	 */
 	private static void steppedFade( final String deviceId, final Device from, final Scene.LightState to, final int durationMs, final java.util.concurrent.atomic.AtomicBoolean cancelled ) throws InterruptedException {
 		final Device.Attributes a = from.attributes();
-		final int steps = (int)Math.max( 1, Math.ceil( durationMs / (double)STEP_MS ) );
 		final long start = System.currentTimeMillis();
 
 		final Integer level0 = from.dimmable() && a.lightLevel() != null ? a.lightLevel() : null;
@@ -381,6 +390,26 @@ public class Scenes {
 				? new double[] { to.colorHue(), Math.clamp( to.colorSaturation(), 0d, 1d ) }
 				: whiteTarget ? home.dirigera.ColorMath.kelvinToHueSat( to.colorTemperature() ) : null;
 
+		// Aim for one brightness level (or ~2° of hue, or 50 K) per step, which is
+		// imperceptible, within the MIN_STEP_MS..STEP_MS bounds
+		double change = 1;
+
+		if( to.lightLevel() != null && level0 != null ) {
+			change = Math.max( change, Math.abs( to.lightLevel() - level0 ) );
+		}
+
+		if( fadeInColorSpace && hs0 != null && hs1 != null ) {
+			change = Math.max( change, Math.abs( shortestArc( hs0[0], hs1[0] ) ) / 2 );
+			change = Math.max( change, Math.abs( hs1[1] - hs0[1] ) * 50 );
+		}
+		else if( whiteTarget && temp0 != null ) {
+			change = Math.max( change, Math.abs( to.colorTemperature() - temp0 ) / 50.0 );
+		}
+
+		final int minSteps = (int)Math.max( 1, Math.ceil( durationMs / (double)STEP_MS ) );
+		final int maxSteps = (int)Math.max( 1, durationMs / MIN_STEP_MS );
+		final int steps = (int)Math.clamp( Math.round( change ), minSteps, Math.max( minSteps, maxSteps ) );
+
 		for( int i = 1; i <= steps; i++ ) {
 			final double f = i / (double)steps;
 			final boolean last = i == steps;
@@ -395,13 +424,7 @@ public class Scenes {
 				return;
 			}
 
-			if( to.lightLevel() != null && from.dimmable() ) {
-				final int level = level0 == null ? to.lightLevel() : (int)Math.round( level0 + ( to.lightLevel() - level0 ) * f );
-				Hub.setAttributesQuietly( deviceId, Map.of( "lightLevel", Math.clamp( level, 1, 100 ) ), 0 );
-			}
-
 			if( fadeInColorSpace && hs1 != null ) {
-				Thread.sleep( PATCH_SPACING_MS );
 
 				if( last && !colorTarget && from.supportsColorTemperature() ) {
 					Hub.setAttributesQuietly( deviceId, Map.of( "colorTemperature", to.colorTemperature() ), 0 );
@@ -413,9 +436,15 @@ public class Scenes {
 				}
 			}
 			else if( whiteTarget && from.supportsColorTemperature() ) {
-				Thread.sleep( PATCH_SPACING_MS );
 				final int kelvin = temp0 == null ? to.colorTemperature() : (int)Math.round( temp0 + ( to.colorTemperature() - temp0 ) * f );
 				Hub.setAttributesQuietly( deviceId, Map.of( "colorTemperature", kelvin ), 0 );
+			}
+
+			// Brightness last, as a short glide the bulb finishes before the next step
+			if( to.lightLevel() != null && from.dimmable() ) {
+				Thread.sleep( PATCH_SPACING_MS );
+				final int level = level0 == null ? to.lightLevel() : (int)Math.round( level0 + ( to.lightLevel() - level0 ) * f );
+				Hub.setAttributesQuietly( deviceId, Map.of( "lightLevel", Math.clamp( level, 1, 100 ) ), STEP_GLIDE_MS );
 			}
 		}
 	}
