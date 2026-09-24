@@ -354,12 +354,36 @@ public class Scenes {
 		final long start = System.currentTimeMillis();
 
 		final Integer level0 = from.dimmable() && a.lightLevel() != null ? a.lightLevel() : null;
-		final Integer temp0 = a.colorTemperature();
-		final Double hue0 = a.colorHue();
-		final Double sat0 = a.colorSaturation() != null ? Math.clamp( a.colorSaturation(), 0d, 1d ) : null;
+
+		// The hub keeps reporting the INACTIVE mode's last values: a bulb showing white
+		// still reports whatever hue it last showed (and vice versa). Only the active
+		// mode's values say what the bulb looks like right now.
+		final boolean startsInColor = from.inColorMode() && a.colorHue() != null && a.colorSaturation() != null;
+		final Integer temp0 = !from.inColorMode() ? a.colorTemperature() : null;
+
+		double[] hs0 = null;
+
+		if( startsInColor ) {
+			hs0 = new double[] { a.colorHue(), Math.clamp( a.colorSaturation(), 0d, 1d ) };
+		}
+		else if( a.colorTemperature() != null ) {
+			hs0 = home.dirigera.ColorMath.kelvinToHueSat( a.colorTemperature() );
+		}
+
+		// Where the colour goes. A colour target fades in hue/saturation. A white target
+		// from a bulb showing colour also fades in hue/saturation, toward the colour of
+		// that white, and the last step switches it into temperature mode.
+		final boolean colorTarget = to.colorHue() != null && to.colorSaturation() != null;
+		final boolean whiteTarget = to.colorTemperature() != null;
+		final boolean fadeInColorSpace = from.supportsColor() && ( colorTarget || ( whiteTarget && startsInColor ) );
+
+		final double[] hs1 = colorTarget
+				? new double[] { to.colorHue(), Math.clamp( to.colorSaturation(), 0d, 1d ) }
+				: whiteTarget ? home.dirigera.ColorMath.kelvinToHueSat( to.colorTemperature() ) : null;
 
 		for( int i = 1; i <= steps; i++ ) {
 			final double f = i / (double)steps;
+			final boolean last = i == steps;
 			final long due = start + (long)( f * durationMs );
 			final long wait = due - System.currentTimeMillis();
 
@@ -371,24 +395,27 @@ public class Scenes {
 				return;
 			}
 
-			final Integer transition = 0;
-
 			if( to.lightLevel() != null && from.dimmable() ) {
 				final int level = level0 == null ? to.lightLevel() : (int)Math.round( level0 + ( to.lightLevel() - level0 ) * f );
-				Hub.setAttributesQuietly( deviceId, Map.of( "lightLevel", Math.clamp( level, 1, 100 ) ), transition );
+				Hub.setAttributesQuietly( deviceId, Map.of( "lightLevel", Math.clamp( level, 1, 100 ) ), 0 );
 			}
 
-			if( to.colorTemperature() != null && from.supportsColorTemperature() ) {
+			if( fadeInColorSpace && hs1 != null ) {
+				Thread.sleep( PATCH_SPACING_MS );
+
+				if( last && !colorTarget && from.supportsColorTemperature() ) {
+					Hub.setAttributesQuietly( deviceId, Map.of( "colorTemperature", to.colorTemperature() ), 0 );
+				}
+				else {
+					final double hue = hs0 == null ? hs1[0] : hs0[0] + shortestArc( hs0[0], hs1[0] ) * f;
+					final double sat = hs0 == null ? hs1[1] : hs0[1] + ( hs1[1] - hs0[1] ) * f;
+					Hub.setAttributesQuietly( deviceId, Map.of( "colorHue", ( ( hue % 360 ) + 360 ) % 360, "colorSaturation", Math.clamp( sat, 0d, 1d ) ), 0 );
+				}
+			}
+			else if( whiteTarget && from.supportsColorTemperature() ) {
 				Thread.sleep( PATCH_SPACING_MS );
 				final int kelvin = temp0 == null ? to.colorTemperature() : (int)Math.round( temp0 + ( to.colorTemperature() - temp0 ) * f );
-				Hub.setAttributesQuietly( deviceId, Map.of( "colorTemperature", kelvin ), transition );
-			}
-
-			if( to.colorHue() != null && to.colorSaturation() != null && from.supportsColor() ) {
-				Thread.sleep( PATCH_SPACING_MS );
-				final double hue = hue0 == null ? to.colorHue() : hue0 + shortestArc( hue0, to.colorHue() ) * f;
-				final double sat = sat0 == null ? to.colorSaturation() : sat0 + ( to.colorSaturation() - sat0 ) * f;
-				Hub.setAttributesQuietly( deviceId, Map.of( "colorHue", ( ( hue % 360 ) + 360 ) % 360, "colorSaturation", Math.clamp( sat, 0d, 1d ) ), transition );
+				Hub.setAttributesQuietly( deviceId, Map.of( "colorTemperature", kelvin ), 0 );
 			}
 		}
 	}
