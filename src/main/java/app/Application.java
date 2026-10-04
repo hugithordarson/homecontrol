@@ -4,8 +4,8 @@ import com.webobjects.appserver.WOActionResults;
 import com.webobjects.appserver.WOResponse;
 
 import er.extensions.appserver.ERXApplication;
-import er.extensions.routes.RouteInvocation;
-import er.extensions.routes.RouteTable;
+import er.extensions.routing.ERXRouter;
+import er.extensions.routing.RouteInvocation;
 import home.Hub;
 import home.Scenes;
 import home.components.FrontPage;
@@ -20,32 +20,34 @@ public class Application extends ERXApplication {
 	}
 
 	private void setupRoutes() {
-		RouteTable.defaultRouteTable().map( "/", FrontPage.class );
-		RouteTable.defaultRouteTable().map( "/scenes", ScenesPage.class );
-		RouteTable.defaultRouteTable().map( "/floor", home.components.FloorPage.class );
-		RouteTable.defaultRouteTable().map( "/schedules", home.components.SchedulesPage.class );
-		RouteTable.defaultRouteTable().map( "/setup", SetupPage.class );
+		ERXRouter.declare( routes -> {
+			routes.map( "/", FrontPage.class );
+			routes.map( "/scenes", ScenesPage.class );
+			routes.map( "/floor", home.components.FloorPage.class );
+			routes.map( "/schedules", home.components.SchedulesPage.class );
+			routes.map( "/setup", SetupPage.class );
 
-		// The control endpoints the dashboard's javascript talks to
-		RouteTable.defaultRouteTable().map( "/api/all/*", this::allLights );
-		RouteTable.defaultRouteTable().map( "/api/room/*", this::room );
-		RouteTable.defaultRouteTable().map( "/api/toggle/*", this::toggleDevice );
-		RouteTable.defaultRouteTable().map( "/api/level/*", this::deviceLevel );
-		RouteTable.defaultRouteTable().map( "/api/color/*", this::deviceColor );
-		RouteTable.defaultRouteTable().map( "/api/temperature/*", this::deviceTemperature );
-		RouteTable.defaultRouteTable().map( "/api/scene/*", this::applyScene );
-		RouteTable.defaultRouteTable().map( "/api/rename-room/*", this::renameRoom );
-		RouteTable.defaultRouteTable().map( "/api/rename-scene/*", this::renameScene );
-		RouteTable.defaultRouteTable().map( "/api/room-color/*", this::roomColor );
-		RouteTable.defaultRouteTable().map( "/api/room-level/*", this::roomLevel );
-		RouteTable.defaultRouteTable().map( "/api/batch", this::batch );
-		RouteTable.defaultRouteTable().map( "/api/room-order", this::roomOrder );
-		RouteTable.defaultRouteTable().map( "/api/schedule/run/*", this::runSchedule );
-		RouteTable.defaultRouteTable().map( "/api/schedule/cancel", this::cancelFades );
-		RouteTable.defaultRouteTable().map( "/api/palette/add", this::paletteAdd );
-		RouteTable.defaultRouteTable().map( "/api/palette/remove", this::paletteRemove );
-		RouteTable.defaultRouteTable().map( "/api/effect/*", this::effect );
-		RouteTable.defaultRouteTable().map( "/api/cycle/*", this::toggleCycle );
+			// The control endpoints the dashboard's javascript talks to
+			routes.map( "/api/all/*", this::allLights );
+			routes.map( "/api/room/*", this::room );
+			routes.map( "/api/toggle/*", this::toggleDevice );
+			routes.map( "/api/level/*", this::deviceLevel );
+			routes.map( "/api/color/*", this::deviceColor );
+			routes.map( "/api/temperature/*", this::deviceTemperature );
+			routes.map( "/api/scene/*", this::applyScene );
+			routes.map( "/api/rename-room/*", this::renameRoom );
+			routes.map( "/api/rename-scene/*", this::renameScene );
+			routes.map( "/api/room-color/*", this::roomColor );
+			routes.map( "/api/room-level/*", this::roomLevel );
+			routes.map( "/api/batch", this::batch );
+			routes.map( "/api/room-order", this::roomOrder );
+			routes.map( "/api/schedule/run/*", this::runSchedule );
+			routes.map( "/api/schedule/cancel", this::cancelFades );
+			routes.map( "/api/palette/add", this::paletteAdd );
+			routes.map( "/api/palette/remove", this::paletteRemove );
+			routes.map( "/api/effect/*", this::effect );
+			routes.map( "/api/cycle/*", this::toggleCycle );
+		} );
 	}
 
 	/**
