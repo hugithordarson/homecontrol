@@ -92,12 +92,21 @@ binary connected fine from Terminal while Eclipse-launched JVMs were refused.
 
 ## Building and running
 
-Standard wonder-slim / vermilingua setup, same as the Vacation project:
+An [ng-objects](https://github.com/ngobjects/ng-objects) app (ng-appserver + ng-adaptor-jetty,
+currently on the 0.1.6-SNAPSHOT development version — `mvn install` ng-objects first),
+ported from WebObjects/wonder-slim in October 2026 as an ng dogfooding project.
 
 ```
 mvn package
 ```
 
-Run `app.AppLauncher` from Eclipse (WOLips) for development. The hub speaks
-https with a self-signed certificate on port 8443; `AppLauncher` disables the
-JDK http client's hostname verification accordingly.
+Run `app.AppLauncher` from Eclipse for development (not `Application` directly: the
+launcher sets the JDK HttpClient properties the hubs need before ng starts — the hub
+speaks https with a self-signed certificate on port 8443, so hostname verification is
+off, and pooled connections are kept for 10 minutes because its TLS handshake is slow).
+The port comes from `-WOPort`. Templates live in `src/main/resources/ng/app/components/`
+(still as `.wo` folders), the plan and palette in `ng/app/app-resources/`. In
+development, the app's log is at `/ng/dev/log`.
+
+Deployment: `./deploy.sh` (see `deploy/` for the server setup — wotaskd, JavaMonitor and
+modulo on the home server; ng apps register with wotaskd through ng's WO integration).
