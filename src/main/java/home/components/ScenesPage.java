@@ -2,8 +2,8 @@ package home.components;
 
 import java.util.List;
 
-import com.webobjects.appserver.WOActionResults;
-import com.webobjects.appserver.WOContext;
+import ng.appserver.NGActionResults;
+import ng.appserver.NGContext;
 
 import app.HomeComponent;
 import home.Scene;
@@ -20,7 +20,7 @@ public class ScenesPage extends HomeComponent {
 	public Scene currentScene;
 	public String newSceneName;
 
-	public ScenesPage( WOContext context ) {
+	public ScenesPage( NGContext context ) {
 		super( context );
 	}
 
@@ -36,7 +36,7 @@ public class ScenesPage extends HomeComponent {
 		return scenes().isEmpty();
 	}
 
-	public WOActionResults captureScene() {
+	public NGActionResults captureScene() {
 		if( newSceneName == null || newSceneName.isBlank() ) {
 			flashError( "Give the scene a name first" );
 			return redirectTo( "/scenes" );
@@ -52,7 +52,7 @@ public class ScenesPage extends HomeComponent {
 		return redirectTo( "/scenes" );
 	}
 
-	public WOActionResults applyCurrentScene() {
+	public NGActionResults applyCurrentScene() {
 		try {
 			final String note = Scenes.apply( currentScene.slug() );
 
@@ -71,7 +71,7 @@ public class ScenesPage extends HomeComponent {
 	 * Re-captures the current state of the lights into this scene, keeping its name —
 	 * the way to "edit" a scene: arrange the lights, then update.
 	 */
-	public WOActionResults updateCurrentScene() {
+	public NGActionResults updateCurrentScene() {
 		try {
 			Scenes.captureCurrent( currentScene.name() );
 			flashError( "\"%s\" updated from the current state of the lights".formatted( currentScene.name() ) );
@@ -88,7 +88,7 @@ public class ScenesPage extends HomeComponent {
 		return "hc.renameScene('%s', '%s'); return false".formatted( currentScene.slug(), escaped );
 	}
 
-	public WOActionResults deleteCurrentScene() {
+	public NGActionResults deleteCurrentScene() {
 		Scenes.delete( currentScene.slug() );
 		return redirectTo( "/scenes" );
 	}

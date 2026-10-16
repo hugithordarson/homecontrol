@@ -1,16 +1,16 @@
 package app;
 
-import com.webobjects.appserver.WOContext;
-import com.webobjects.appserver.WOResponse;
+import ng.appserver.NGContext;
+import ng.appserver.http.NGResponse;
+import ng.appserver.http.NGResponses;
+import ng.appserver.templating.NGComponent;
 
-import er.extensions.components.ERXComponent;
-
-public abstract class HomeComponent extends ERXComponent {
+public abstract class HomeComponent extends NGComponent {
 
 	private String _error;
 	private boolean _errorPopped;
 
-	public HomeComponent( WOContext context ) {
+	public HomeComponent( NGContext context ) {
 		super( context );
 	}
 
@@ -18,10 +18,9 @@ public abstract class HomeComponent extends ERXComponent {
 	 * Component actions return this instead of a page, so the browser lands on a
 	 * clean GET URL and a reload doesn't offer to resend the form (post/redirect/get).
 	 */
-	protected WOResponse redirectTo( final String path ) {
-		final WOResponse response = new WOResponse();
-		response.setStatus( 302 );
-		response.setHeader( path, "location" );
+	protected NGResponse redirectTo( final String path ) {
+		final NGResponse response = NGResponses.of( 302, "" );
+		response.setHeader( "location", path );
 		return response;
 	}
 

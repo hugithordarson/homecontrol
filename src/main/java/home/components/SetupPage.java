@@ -2,8 +2,8 @@ package home.components;
 
 import java.util.List;
 
-import com.webobjects.appserver.WOActionResults;
-import com.webobjects.appserver.WOContext;
+import ng.appserver.NGActionResults;
+import ng.appserver.NGContext;
 
 import app.HomeComponent;
 import home.Hub;
@@ -24,7 +24,7 @@ public class SetupPage extends HomeComponent {
 	public String hubName;
 	public Hub.HubConfig currentHub;
 
-	public SetupPage( WOContext context ) {
+	public SetupPage( NGContext context ) {
 		super( context );
 	}
 
@@ -36,7 +36,7 @@ public class SetupPage extends HomeComponent {
 		return !hubs().isEmpty();
 	}
 
-	public WOActionResults startPairing() {
+	public NGActionResults startPairing() {
 		if( hubAddress == null || hubAddress.isBlank() ) {
 			flashError( "Enter the hub's IP address first" );
 			return redirectTo( "/setup" );
@@ -55,7 +55,7 @@ public class SetupPage extends HomeComponent {
 		return redirectTo( "/setup" );
 	}
 
-	public WOActionResults completePairing() {
+	public NGActionResults completePairing() {
 		try {
 			final String token = session().pairing.finish();
 			Hub.addHub( session().pairingName, session().pairing.hubAddress(), token );
@@ -69,13 +69,13 @@ public class SetupPage extends HomeComponent {
 		}
 	}
 
-	public WOActionResults cancelPairing() {
+	public NGActionResults cancelPairing() {
 		session().pairing = null;
 		session().pairingName = null;
 		return redirectTo( "/setup" );
 	}
 
-	public WOActionResults removeCurrentHub() {
+	public NGActionResults removeCurrentHub() {
 		Hub.removeHub( currentHub.address() );
 		return redirectTo( "/setup" );
 	}

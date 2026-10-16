@@ -2,7 +2,7 @@ package home.components;
 
 import java.util.List;
 
-import com.webobjects.appserver.WOContext;
+import ng.appserver.NGContext;
 
 import app.HomeComponent;
 import home.Palette;
@@ -19,7 +19,7 @@ public class SelectionPanel extends HomeComponent {
 
 	public Palette.Preset currentPreset;
 
-	public SelectionPanel( WOContext context ) {
+	public SelectionPanel( NGContext context ) {
 		super( context );
 	}
 

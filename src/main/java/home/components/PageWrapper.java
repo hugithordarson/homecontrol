@@ -1,12 +1,14 @@
 package home.components;
 
-import com.webobjects.appserver.WOContext;
+import java.util.Objects;
+
+import ng.appserver.NGContext;
 
 import app.HomeComponent;
 
 public class PageWrapper extends HomeComponent {
 
-	public PageWrapper( WOContext context ) {
+	public PageWrapper( NGContext context ) {
 		super( context );
 	}
 
@@ -16,10 +18,10 @@ public class PageWrapper extends HomeComponent {
 	}
 
 	public String title() {
-		return stringValueForBinding( "title", "HomeControl" );
+		return Objects.requireNonNullElse( (String)valueForBinding( "title" ), "HomeControl" );
 	}
 
 	public String mainStyle() {
-		return "max-width: %s; margin: 0 auto; padding: 24px 16px".formatted( stringValueForBinding( "width", "980px" ) );
+		return "max-width: %s; margin: 0 auto; padding: 24px 16px".formatted( Objects.requireNonNullElse( (String)valueForBinding( "width" ), "980px" ) );
 	}
 }

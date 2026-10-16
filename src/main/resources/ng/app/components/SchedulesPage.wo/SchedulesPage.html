@@ -48,36 +48,36 @@
 	</wo:if>
 
 	<h2>New schedule</h2>
-	<wo:WOForm>
+	<wo:form>
 		<div class="schedform">
 			<label class="lbl">Name</label>
-			<wo:WOTextField value="$scheduleName" placeholder="e.g. Evening" />
+			<wo:textfield value="$scheduleName" placeholder="e.g. Evening" />
 
 			<label class="lbl">When</label>
-			<span><wo:WOTextField value="$trigger" /> <span class="hint">a time like 17:30, or sunrise / sunset with an offset in minutes: sunset+30, sunrise-15</span></span>
+			<span><wo:textfield value="$trigger" /> <span class="hint">a time like 17:30, or sunrise / sunset with an offset in minutes: sunset+30, sunrise-15</span></span>
 
 			<label class="lbl">Days</label>
 			<span class="checks">
 				<wo:repetition list="$weekdays" item="$currentDay">
-					<label><wo:WOCheckBox checked="$currentDayChecked" /><wo:str value="$currentDayLabel" /></label>
+					<label><wo:checkbox checked="$currentDayChecked" /><wo:str value="$currentDayLabel" /></label>
 				</wo:repetition>
 			</span>
 
 			<label class="lbl">Scene</label>
-			<wo:WOPopUpButton list="$scenes" item="$currentScene" displayString="$currentScene.name" selection="$selectedScene" noSelectionString="Pick a scene" />
+			<wo:popUpButton list="$scenes" item="$currentScene" displayString="$currentScene.name" selection="$selectedScene" noSelectionString="Pick a scene" />
 
 			<label class="lbl">Fade over</label>
-			<span><wo:WOTextField value="$durationMinutes" size="4" /> minutes <span class="hint">(0 = switch at once; the bulbs fade on their own, up to 100 minutes)</span></span>
+			<span><wo:textfield value="$durationMinutes" size="4" /> minutes <span class="hint">(0 = switch at once; the bulbs fade on their own, up to 100 minutes)</span></span>
 
 			<label class="lbl">Rooms</label>
 			<span class="checks">
 				<wo:repetition list="$rooms" item="$currentRoom">
-					<label><wo:WOCheckBox checked="$currentRoomChecked" /><wo:str value="$currentRoom.name" /></label>
+					<label><wo:checkbox checked="$currentRoomChecked" /><wo:str value="$currentRoom.name" /></label>
 				</wo:repetition>
 				<span class="hint">none ticked = every room</span>
 			</span>
 
-			<wo:WOSubmitButton action="$addSchedule" value="Add schedule" class="submit" />
+			<wo:submit action="$addSchedule" value="Add schedule" class="submit" />
 		</div>
-	</wo:WOForm>
+	</wo:form>
 </wo:PageWrapper>

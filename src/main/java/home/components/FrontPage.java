@@ -2,7 +2,7 @@ package home.components;
 
 import java.util.List;
 
-import com.webobjects.appserver.WOContext;
+import ng.appserver.NGContext;
 
 import app.HomeComponent;
 import home.Hub;
@@ -28,7 +28,7 @@ public class FrontPage extends HomeComponent {
 	private String _hubError;
 	private boolean _loaded;
 
-	public FrontPage( WOContext context ) {
+	public FrontPage( NGContext context ) {
 		super( context );
 	}
 

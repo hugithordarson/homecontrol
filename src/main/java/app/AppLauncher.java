@@ -1,6 +1,6 @@
 package app;
 
-import er.extensions.appserver.ERXApplication;
+import ng.appserver.NGApplication;
 
 public class AppLauncher {
 
@@ -13,6 +13,6 @@ public class AppLauncher {
 		// the hub's TLS handshake is slow enough to audibly drag a lightning strike
 		System.setProperty( "jdk.httpclient.keepalive.timeout", "600" );
 
-		ERXApplication.main( argv, Application.class );
+		NGApplication.run( argv, Application.class );
 	}
 }

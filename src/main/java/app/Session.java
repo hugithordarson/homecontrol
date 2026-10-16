@@ -1,9 +1,9 @@
 package app;
 
-import er.extensions.appserver.ERXSession;
+import ng.appserver.NGSession;
 import home.dirigera.DirigeraPairing;
 
-public class Session extends ERXSession {
+public class Session extends NGSession {
 
 	/**
 	 * An in-flight hub pairing (started on SetupPage), kept here so it survives
@@ -14,11 +14,6 @@ public class Session extends ERXSession {
 	public String pairingName;
 
 	private String _flashError;
-
-	public Session() {
-		setStoresIDsInCookies( true );
-		setStoresIDsInURLs( false );
-	}
 
 	public void setFlashError( final String message ) {
 		_flashError = message;
@@ -31,10 +26,5 @@ public class Session extends ERXSession {
 		final String error = _flashError;
 		_flashError = null;
 		return error;
-	}
-
-	@Override
-	public String domainForIDCookies() {
-		return "/";
 	}
 }

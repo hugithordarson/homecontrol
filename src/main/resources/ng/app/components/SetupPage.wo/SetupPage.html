@@ -21,18 +21,18 @@
 	<wo:if condition="$pairingNotStarted">
 		<h2>Pair a hub</h2>
 		<p>Enter the IP address of the DIRIGERA hub. You can find it in your router's device list, or in the IKEA Home smart app under hub settings.</p>
-		<wo:WOForm>
-			<wo:WOTextField value="$hubName" placeholder="Name, e.g. Office" />
-			<wo:WOTextField value="$hubAddress" placeholder="e.g. 192.168.1.100" />
-			<wo:WOSubmitButton action="$startPairing" value="Start pairing" />
-		</wo:WOForm>
+		<wo:form>
+			<wo:textfield value="$hubName" placeholder="Name, e.g. Office" />
+			<wo:textfield value="$hubAddress" placeholder="e.g. 192.168.1.100" />
+			<wo:submit action="$startPairing" value="Start pairing" />
+		</wo:form>
 	</wo:if>
 
 	<wo:if condition="$pairingStarted">
 		<p><strong>Now press the action button</strong> on the bottom of the hub. You have about 90 seconds. Then:</p>
-		<wo:WOForm multipleSubmit="true">
-			<wo:WOSubmitButton action="$completePairing" value="I pressed the button" />
-			<wo:WOSubmitButton action="$cancelPairing" value="Start over" />
-		</wo:WOForm>
+		<wo:form>
+			<wo:submit action="$completePairing" value="I pressed the button" />
+			<wo:submit action="$cancelPairing" value="Start over" />
+		</wo:form>
 	</wo:if>
 </wo:PageWrapper>

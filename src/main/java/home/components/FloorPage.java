@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.gson.Gson;
-import com.webobjects.appserver.WOContext;
+import ng.appserver.NGContext;
 
 import app.HomeComponent;
 import home.Hub;
@@ -33,13 +33,13 @@ public class FloorPage extends HomeComponent {
 	private FloorPlan _plan;
 	private Map<String, Hub.RoomGroup> _groupsByName;
 
-	public FloorPage( WOContext context ) {
+	public FloorPage( NGContext context ) {
 		super( context );
 	}
 
 	public List<Region> regions() {
 		if( _plan == null ) {
-			final byte[] bytes = application().resourceManager().bytesForResourceNamed( "floorplan.json", null, null );
+			final byte[] bytes = application().resourceManager().obtainAppResource( "app", "floorplan.json" ).orElseThrow().bytes();
 			_plan = gson.fromJson( new String( bytes, StandardCharsets.UTF_8 ), FloorPlan.class );
 		}
 

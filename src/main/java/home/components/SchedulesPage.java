@@ -7,8 +7,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.webobjects.appserver.WOActionResults;
-import com.webobjects.appserver.WOContext;
+import ng.appserver.NGActionResults;
+import ng.appserver.NGContext;
 
 import app.HomeComponent;
 import home.Hub;
@@ -39,7 +39,7 @@ public class SchedulesPage extends HomeComponent {
 
 	private List<Hub.RoomGroup> _rooms;
 
-	public SchedulesPage( WOContext context ) {
+	public SchedulesPage( NGContext context ) {
 		super( context );
 	}
 
@@ -51,7 +51,7 @@ public class SchedulesPage extends HomeComponent {
 		return runningFades() > 0;
 	}
 
-	public WOActionResults cancelFades() {
+	public NGActionResults cancelFades() {
 		final int count = Scenes.cancelAllFades();
 		flashError( "Stopped the fade on %s lights — they stay as they are now".formatted( count ) );
 		return redirectTo( "/schedules" );
@@ -120,7 +120,7 @@ public class SchedulesPage extends HomeComponent {
 		}
 	}
 
-	public WOActionResults addSchedule() {
+	public NGActionResults addSchedule() {
 		try {
 			if( scheduleName == null || scheduleName.isBlank() ) {
 				throw new IllegalArgumentException( "Give the schedule a name" );
@@ -200,19 +200,19 @@ public class SchedulesPage extends HomeComponent {
 		return currentSchedule.enabled() ? "Disable" : "Enable";
 	}
 
-	public WOActionResults toggleCurrentSchedule() {
+	public NGActionResults toggleCurrentSchedule() {
 		Schedules.setEnabled( currentSchedule.id(), !currentSchedule.enabled() );
 		return redirectTo( "/schedules" );
 	}
 
-	public WOActionResults runCurrentSchedule() {
+	public NGActionResults runCurrentSchedule() {
 		final Schedule schedule = currentSchedule;
 		Thread.ofVirtual().start( () -> Schedules.run( schedule ) );
 		flashError( "Running \"%s\" now%s".formatted( schedule.name(), schedule.durationMinutes() > 0 ? " — the fade takes " + schedule.durationMinutes() + " minutes" : "" ) );
 		return redirectTo( "/schedules" );
 	}
 
-	public WOActionResults deleteCurrentSchedule() {
+	public NGActionResults deleteCurrentSchedule() {
 		Schedules.delete( currentSchedule.id() );
 		return redirectTo( "/schedules" );
 	}

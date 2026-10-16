@@ -10,7 +10,7 @@ import java.util.List;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.webobjects.appserver.WOApplication;
+import ng.appserver.NGApplication;
 
 /**
  * The palette of preset chips: the built-in set from woresources/palette.json
@@ -56,7 +56,7 @@ public class Palette {
 
 	private static List<Preset> builtIn() {
 		if( _builtIn == null ) {
-			final byte[] bytes = WOApplication.application().resourceManager().bytesForResourceNamed( "palette.json", null, null );
+			final byte[] bytes = NGApplication.application().resourceManager().obtainAppResource( "app", "palette.json" ).orElseThrow().bytes();
 			_builtIn = gson.fromJson( new String( bytes, StandardCharsets.UTF_8 ), PaletteFile.class ).presets()
 					.stream()
 					.map( p -> new Preset( p.name(), p.hex(), p.kelvin(), p.hexes(), false ) )
