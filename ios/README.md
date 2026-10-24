@@ -15,3 +15,7 @@ simulator; Settings in the app overrides it. ljos.rebbi.is is a LAN name, so the
 app (and its Siri/Control Center actions) work on the home network only.
 
 Distribution: internal TestFlight on team R9H5W8A5DE, bundle id `is.rebbi.ljos`.
+
+Publishing a build: `./testflight.sh` archives, signs and uploads it; it reaches the
+internal testers through TestFlight after Apple's processing (no App Review for
+internal testing). Builds expire after 90 days.
