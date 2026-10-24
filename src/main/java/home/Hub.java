@@ -191,9 +191,16 @@ public class Hub {
 	 * with rooms not yet ordered following alphabetically
 	 */
 	public static List<RoomGroup> roomGroups() {
+		return roomGroups( lights() );
+	}
+
+	/**
+	 * @return The given lights grouped by room, ordered as in roomGroups()
+	 */
+	public static List<RoomGroup> roomGroups( final List<Device> lights ) {
 		final Map<String, RoomGroup> groups = new LinkedHashMap<>();
 
-		for( final Device light : lights() ) {
+		for( final Device light : lights ) {
 			groups.computeIfAbsent( light.roomId(), _ -> new RoomGroup( light.roomId(), light.roomName(), hubNameForDevice( light.id() ), new ArrayList<>() ) )
 					.lights()
 					.add( light );

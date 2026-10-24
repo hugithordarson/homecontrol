@@ -36,7 +36,8 @@ public class Application extends NGApplication {
 		routes.map( "/setup", SetupPage.class );
 
 
-		// The control endpoints the dashboard's javascript talks to
+		// The control endpoints the dashboard's javascript (and the iOS app) talks to
+		routes.map( "/api/state", this::state );
 		routes.map( "/api/all/*", this::allLights );
 		routes.map( "/api/room/*", this::room );
 		routes.map( "/api/toggle/*", this::toggleDevice );
@@ -57,6 +58,13 @@ public class Application extends NGApplication {
 		routes.map( "/api/effect/*", this::effect );
 		routes.map( "/api/cycle/*", this::toggleCycle );
 		return routes;
+	}
+
+	/**
+	 * GET /api/state — every room, light, scene and palette chip as JSON (see StateFeed)
+	 */
+	private NGActionResults state( NGRequest request ) {
+		return json( home.StateFeed.json() );
 	}
 
 	/**
