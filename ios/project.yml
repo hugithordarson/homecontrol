@@ -1,0 +1,73 @@
+# Generate Ljos.xcodeproj with `xcodegen` (brew install xcodegen) — the project file
+# itself isn't committed; this is the source of truth.
+name: Ljos
+options:
+  bundleIdPrefix: is.rebbi
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    DEVELOPMENT_TEAM: R9H5W8A5DE
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    TARGETED_DEVICE_FAMILY: "1,2"
+
+# Plain-http access to the home server (ljos.rebbi.is is a LAN name) and to the
+# dev app on localhost; the private address also needs the Local Network prompt.
+targetTemplates:
+  HomeNetwork:
+    info:
+      properties:
+        NSLocalNetworkUsageDescription: Ljós talks to the HomeControl server on your home network.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+          NSExceptionDomains:
+            rebbi.is:
+              NSIncludesSubdomains: true
+              NSExceptionAllowsInsecureHTTPLoads: true
+
+targets:
+  Ljos:
+    type: application
+    platform: iOS
+    templates: [HomeNetwork]
+    sources: [App, Shared]
+    entitlements:
+      path: App/Ljos.entitlements
+      properties:
+        com.apple.security.application-groups: [group.is.rebbi.ljos]
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Ljós
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: is.rebbi.ljos
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - target: LjosControls
+
+  LjosControls:
+    type: app-extension
+    platform: iOS
+    templates: [HomeNetwork]
+    sources: [Controls, Shared]
+    entitlements:
+      path: Controls/LjosControls.entitlements
+      properties:
+        com.apple.security.application-groups: [group.is.rebbi.ljos]
+    info:
+      path: Controls/Info.plist
+      properties:
+        CFBundleDisplayName: Ljós
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: is.rebbi.ljos.controls
