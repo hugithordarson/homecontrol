@@ -17,13 +17,24 @@ public class Application extends NGApplication {
 
 	public Application() {
 		home.Schedules.startScheduler();
+
+		// Stop a running MrBlinken storm on shutdown, so the strip and its fade setting are restored
+		Runtime.getRuntime().addShutdownHook( new Thread( () -> {
+			try {
+				mrblinken.Lightning.defaultLightning().stopStorm().get( 5, java.util.concurrent.TimeUnit.SECONDS );
+			}
+			catch( final Exception e ) {
+				// Nothing to do, we're going down anyway
+			}
+		} ) );
 	}
 
 	@Override
 	public Elements elements() {
 		return super
 				.elements()
-				.elementPackage( "home.components" );
+				.elementPackage( "home.components" )
+				.elementPackage( "mrblinken" );
 	}
 
 	@Override
@@ -34,6 +45,9 @@ public class Application extends NGApplication {
 		routes.map( "/floor", home.components.FloorPage.class );
 		routes.map( "/schedules", home.components.SchedulesPage.class );
 		routes.map( "/setup", SetupPage.class );
+
+		// MrBlinken, the Halloween storm on the Shelly LED strip — brought over from its own app, logic in the mrblinken package
+		routes.map( "/mrblinken", mrblinken.LMLightsPage.class );
 
 
 		// The control endpoints the dashboard's javascript (and the iOS app) talks to
